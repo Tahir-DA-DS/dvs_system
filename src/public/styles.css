@@ -1,0 +1,153 @@
+:root {
+  --bg: #0f172a;
+  --panel: #111827;
+  --card: #1f2937;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --primary: #2563eb;
+  --primary-600: #1d4ed8;
+  --border: #2d3748;
+  --success: #10b981;
+  --danger: #ef4444;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  background: linear-gradient(180deg, var(--bg) 0%, #0b1220 100%);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.4;
+}
+
+header {
+  position: sticky;
+  top: 0;
+  background: rgba(17, 24, 39, 0.8);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+
+nav a {
+  color: var(--text);
+  text-decoration: none;
+  margin-right: 14px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+nav a:hover { border-color: var(--border); background: rgba(255,255,255,0.03); }
+
+h1 { font-size: 28px; margin: 18px 0 12px; }
+h2 { font-size: 18px; margin: 0 0 10px; }
+h3 { font-size: 16px; margin: 10px 0; color: var(--muted); }
+
+section, .card {
+  background: linear-gradient(180deg, var(--panel), var(--card));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+label { display: block; color: var(--muted); font-size: 13px; margin: 10px 0 6px; }
+
+input, select, textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: #0b1220;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: none;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2); }
+
+button {
+  appearance: none;
+  border: 1px solid var(--primary);
+  background: linear-gradient(180deg, var(--primary), var(--primary-600));
+  color: white;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25);
+  transition: transform .05s ease, filter .2s ease, box-shadow .2s ease;
+}
+button:hover { filter: brightness(1.05); }
+button:active { transform: translateY(1px); }
+
+.btn-secondary {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text);
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.04); }
+
+.row { display: flex; gap: 10px; }
+
+.muted { color: var(--muted); }
+
+.list {
+  list-style: none;
+  padding: 0;
+}
+.list li { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; background: #0b1220; }
+
+.hero {
+  background: radial-gradient(1200px 400px at 50% -10%, rgba(37, 99, 235, 0.15), transparent 60%);
+  border-bottom: 1px solid var(--border);
+}
+
+.links li { margin: 8px 0; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
+  background: #0b1220;
+  border-radius: 12px;
+  overflow: hidden;
+}
+thead { background: rgba(255,255,255,0.03); }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+tbody tr:hover { background: rgba(37,99,235,0.06); }
+tbody tr:nth-child(odd) { background: rgba(255,255,255,0.02); }
+thead th { position: sticky; top: 0; z-index: 1; }
+
+/* Mobile optimizations */
+@media (max-width: 700px) {
+  .container { padding: 18px 14px; }
+  h1 { font-size: 22px; }
+  nav a { display: inline-block; margin: 6px 8px 0 0; padding: 6px 8px; }
+  .grid { grid-template-columns: 1fr; }
+  .row { flex-direction: column; }
+  input, select, textarea, button { font-size: 16px; } /* better tap targets */
+  table { font-size: 14px; }
+}
+
+/* Toasts and messages */
+.toast {
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+}
+.toast.success { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.35); }
+.toast.error { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.35); }
+
+

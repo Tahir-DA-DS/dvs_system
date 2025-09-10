@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tutor Sign-Up - DVS</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <nav>
+          <a href="/">Home</a>
+          <a href="/student.html">Register Student</a>
+          <a href="/class-record.html">Class Record</a>
+          <a href="/admin.html">Admin</a>
+        </nav>
+      </div>
+    </header>
+    <div class="container">
+      <h1>Tutor Sign-Up</h1>
+      <section>
+        <label>Full Name<input id="tutorName" /></label>
+        <label>Account Number<input id="tutorAcct" /></label>
+        <label>Bank Name<input id="tutorBank" /></label>
+        <label>Subjects (Ctrl/Cmd + Click to multi-select)
+          <select id="tutorSubjects" multiple size="8">
+            <option>Mathematics</option>
+            <option>English</option>
+            <option>Physics</option>
+            <option>Chemistry</option>
+            <option>Biology</option>
+            <option>Economics</option>
+            <option>Government</option>
+            <option>Literature</option>
+            <option>Computer Science</option>
+            <option>Coding</option>
+          </select>
+        </label>
+        <button onclick="createTutor()">Save Tutor</button>
+        <div id="tutorMsg" class="muted"></div>
+      </section>
+    </div>
+
+    <script>
+      const api = (path) => `${location.origin}/api${path}`;
+      function getSelectedValues(select) {
+        return Array.from(select.selectedOptions).map(o=>o.value);
+      }
+      async function createTutor() {
+        const name = document.getElementById('tutorName').value.trim();
+        const accountNumber = document.getElementById('tutorAcct').value.trim();
+        const bank = document.getElementById('tutorBank').value.trim();
+        const subjects = getSelectedValues(document.getElementById('tutorSubjects'));
+        const res = await fetch(api('/tutors'), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, accountNumber, bank, subjects }) });
+        const out = await res.json();
+        document.getElementById('tutorMsg').textContent = res.ok ? 'Tutor saved' : out.message;
+      }
+    </script>
+  </body>
+  </html>
+
+

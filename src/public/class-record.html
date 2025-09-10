@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Class Record - DVS</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <nav>
+          <a href="/">Home</a>
+          <a href="/tutor.html">Tutor Sign-Up</a>
+          <a href="/student.html">Register Student</a>
+          <a href="/admin.html">Admin</a>
+        </nav>
+      </div>
+    </header>
+    <div class="container">
+      <h1>Class Record</h1>
+      <section>
+        <label>Tutor<select id="crTutor"></select></label>
+        <label>Student<select id="crStudent"></select></label>
+        <label>Class<select id="crClass"></select></label>
+        <label>Subject<select id="crSubject"></select></label>
+        <label>Topic<input id="crTopic" /></label>
+        <div class="row">
+          <label style="flex:1">Start Time<input type="datetime-local" id="crStart" /></label>
+          <label style="flex:1">End Time<input type="datetime-local" id="crEnd" /></label>
+        </div>
+        <label>Comment (optional)
+          <textarea id="crComment"></textarea>
+        </label>
+        <div>Payment: <span id="crPayment">₦0</span> <span class="muted" id="crRate"></span></div>
+        <button onclick="createClassRecord()">Submit Class Record</button>
+        <div id="crMsg" class="muted"></div>
+      </section>
+    </div>
+
+    <script>
+      const api = (path) => `${location.origin}/api${path}`;
+      async function loadDropdowns() {
+        const [tutors, students] = await Promise.all([
+          fetch(api('/tutors')).then(r=>r.json()),
+          fetch(api('/students')).then(r=>r.json())
+        ]);
+        const tutorSel = document.getElementById('crTutor');
+        tutorSel.innerHTML = '<option value="">Select Tutor</option>' + tutors.map(t=>`<option value="${t._id}">${t.name}</option>`).join('');
+        const studentSel = document.getElementById('crStudent');
+        studentSel.innerHTML = '<option value="">Select Student</option>' + students.map(s=>`<option value="${s._id}">${s.name}</option>`).join('');
+        const classSel = document.getElementById('crClass');
+        classSel.innerHTML = ['Nursery', ...Array.from({length:12},(_,i)=>`Year ${i+1}`)].map(c=>`<option>${c}</option>`).join('');
+      }
+      function getRate(classLevel) {
+        const ll = classLevel.toLowerCase();
+        if (ll==='nursery' || /year\s*[1-6]/i.test(classLevel)) return 3800;
+        if (/year\s*(7|8|9|10)/i.test(classLevel)) return 4300;
+        if (/year\s*(11|12)/i.test(classLevel)) return 5000;
+        return 0;
+      }
+      function recalc() {
+        const classLevel = document.getElementById('crClass').value;
+        const rate = getRate(classLevel);
+        const start = document.getElementById('crStart').value;
+        const end = document.getElementById('crEnd').value;
+        let amount = 0;
+        if (start && end) {
+          const s = new Date(start);
+          const e = new Date(end);
+          if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && e > s) {
+            const minutes = (e.getTime() - s.getTime()) / 60000;
+            const hours = minutes / 60;
+            amount = Math.round(rate * hours);
+          }
+        }
+        document.getElementById('crPayment').textContent = `₦${amount.toLocaleString()}`;
+        document.getElementById('crRate').textContent = rate ? `(₦${rate.toLocaleString()} / hr)` : '';
+      }
+      document.addEventListener('change', (e)=>{
+        if (['crClass','crStart','crEnd'].includes(e.target.id)) recalc();
+      });
+      document.addEventListener('input', (e)=>{
+        if (['crStart','crEnd'].includes(e.target.id)) recalc();
+      });
+      document.addEventListener('change', async (e)=>{
+        if (e.target && e.target.id === 'crTutor') {
+          const tutorId = document.getElementById('crTutor').value;
+          const subjectSel = document.getElementById('crSubject');
+          if (!tutorId) { subjectSel.innerHTML = ''; return; }
+          const tutors = await fetch(api('/tutors')).then(r=>r.json());
+          const tutor = tutors.find(t=>t._id===tutorId);
+          subjectSel.innerHTML = tutor ? tutor.subjects.map(s=>`<option>${s}</option>`).join('') : '';
+        }
+      });
+      async function createClassRecord() {
+        const payload = {
+          tutorId: document.getElementById('crTutor').value,
+          studentId: document.getElementById('crStudent').value,
+          classLevel: document.getElementById('crClass').value,
+          subject: document.getElementById('crSubject').value,
+          topic: document.getElementById('crTopic').value,
+          startTime: document.getElementById('crStart').value,
+          endTime: document.getElementById('crEnd').value,
+          comment: document.getElementById('crComment').value
+        };
+        const res = await fetch(api('/class-records'), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const out = await res.json();
+        document.getElementById('crMsg').textContent = res.ok ? 'Class record saved' : out.message;
+      }
+      loadDropdowns();
+    </script>
+  </body>
+  </html>
+
+

@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin - DVS</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <script>
+      (async function gate(){
+        const saved = localStorage.getItem('adminPass') || '';
+        if (!saved) { window.location.replace('/admin-login.html'); return; }
+        // Validate password with a lightweight protected call
+        try {
+          const resp = await fetch(`${location.origin}/api/admin/tutors`, { headers: { 'x-admin-password': saved } });
+          if (!resp.ok) { window.location.replace('/admin-login.html'); }
+        } catch (e) {
+          // If network error, stay but controls will fail gracefully
+        }
+      })();
+    </script>
+    <header>
+      <div class="container">
+        <nav>
+          <a href="/">Home</a>
+          <a href="/tutor.html">Tutor Sign-Up</a>
+          <a href="/student.html">Register Student</a>
+          <a href="/class-record.html">Class Record</a>
+        </nav>
+      </div>
+    </header>
+    <div class="container">
+      <h1>Admin</h1>
+
+      <section>
+        <h2>Download Records</h2>
+        <label>Filter Tutor<select id="adTutor"></select></label>
+        <div class="row">
+          <label style="flex:1">From<input type="date" id="adFrom" /></label>
+          <label style="flex:1">To<input type="date" id="adTo" /></label>
+        </div>
+        <button onclick="downloadCSV()">Download CSV</button>
+        <button onclick="downloadStudentSummaryCSV()" style="margin-left:8px;">Download Student Summary CSV</button>
+      </section>
+
+      <section style="margin-top:16px;">
+        <h2>Approve Late Submission</h2>
+        <label>Record ID<input id="lateRecordId" /></label>
+        <label>Admin Name<input id="lateAdminName" /></label>
+        <label>Notes<input id="lateNotes" /></label>
+        <button onclick="approveLate()">Approve Late</button>
+        <div id="adminMsg" class="muted"></div>
+      </section>
+
+      <section style="margin-top:16px;">
+        <h2>Records</h2>
+        <div class="row">
+          <button onclick="loadRecords()">Refresh</button>
+          <button onclick="downloadCSV()">Download Displayed CSV</button>
+        </div>
+        <div style="overflow:auto; margin-top:10px;">
+          <table id="recordsTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Tutor</th>
+                <th>Student</th>
+                <th>Class</th>
+                <th>Subject</th>
+                <th>Topic</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Amount (₦)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const api = (path) => `${location.origin}/api${path}`;
+      const getPass = () => localStorage.getItem('adminPass') || '';
+      async function loadTutors() {
+        const tutorsResp = await fetch(api('/admin/tutors'), { headers: { 'x-admin-password': getPass() } });
+        if (!tutorsResp.ok) { document.getElementById('adTutor').innerHTML = ''; return; }
+        const tutors = await tutorsResp.json();
+        const adTutor = document.getElementById('adTutor');
+        adTutor.innerHTML = '<option value="">All Tutors</option>' + tutors.map(t=>`<option value="${t._id}">${t.name}</option>`).join('');
+      }
+      async function downloadCSV() {
+        const tutorId = document.getElementById('adTutor').value;
+        const from = document.getElementById('adFrom').value;
+        const to = document.getElementById('adTo').value;
+        const url = new URL(api('/admin/export'));
+        url.searchParams.set('adminPassword', getPass());
+        if (tutorId) url.searchParams.set('tutorId', tutorId);
+        if (from) url.searchParams.set('from', from);
+        if (to) url.searchParams.set('to', to);
+        const a = document.createElement('a');
+        a.href = url.toString();
+        a.click();
+      }
+      async function downloadStudentSummaryCSV() {
+        const tutorId = document.getElementById('adTutor').value;
+        const from = document.getElementById('adFrom').value;
+        const to = document.getElementById('adTo').value;
+        const url = new URL(api('/admin/export-student-summary'));
+        url.searchParams.set('adminPassword', getPass());
+        if (tutorId) url.searchParams.set('tutorId', tutorId);
+        if (from) url.searchParams.set('from', from);
+        if (to) url.searchParams.set('to', to);
+        const a = document.createElement('a');
+        a.href = url.toString();
+        a.click();
+      }
+      async function approveLate() {
+        const recordId = document.getElementById('lateRecordId').value.trim();
+        const adminName = document.getElementById('lateAdminName').value.trim();
+        const notes = document.getElementById('lateNotes').value.trim();
+        const res = await fetch(api(`/admin/late-approve/${recordId}`), { method:'POST', headers:{'Content-Type':'application/json', 'x-admin-password': getPass() }, body: JSON.stringify({ adminName, notes }) });
+        const out = await res.json();
+        document.getElementById('adminMsg').textContent = res.ok ? 'Late approved' : out.message;
+      }
+      async function loadRecords() {
+        const tutorId = document.getElementById('adTutor').value;
+        const from = document.getElementById('adFrom').value;
+        const to = document.getElementById('adTo').value;
+        const params = new URLSearchParams();
+        if (tutorId) params.set('tutorId', tutorId);
+        if (from) params.set('from', from);
+        if (to) params.set('to', to);
+        const resp = await fetch(api(`/class-records?${params.toString()}`));
+        if (!resp.ok) return;
+        const rows = await resp.json();
+        const tbody = document.querySelector('#recordsTable tbody');
+        tbody.innerHTML = rows.map(r => `
+          <tr>
+            <td>${new Date(r.dateSubmitted).toLocaleDateString()}</td>
+            <td>${r.tutorId?.name || ''}</td>
+            <td>${r.studentId?.name || ''}</td>
+            <td>${r.classLevel}</td>
+            <td>${r.subject}</td>
+            <td>${r.topic}</td>
+            <td>${new Date(r.startTime).toLocaleString()}</td>
+            <td>${new Date(r.endTime).toLocaleString()}</td>
+            <td>${(r.paymentAmount||0).toLocaleString()}</td>
+            <td>${r.status}</td>
+          </tr>
+        `).join('');
+      }
+      loadTutors();
+      loadRecords();
+    </script>
+  </body>
+  </html>
+
+

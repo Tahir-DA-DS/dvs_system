@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Register Student - DVS</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <nav>
+          <a href="/">Home</a>
+          <a href="/tutor.html">Tutor Sign-Up</a>
+          <a href="/class-record.html">Class Record</a>
+          <a href="/admin.html">Admin</a>
+        </nav>
+      </div>
+    </header>
+    <div class="container">
+      <h1>Register Student</h1>
+      <section>
+        <label>Student Name<input id="studentName" /></label>
+        <label>Class
+          <select id="studentClass"></select>
+        </label>
+        <label>Enrolled Subjects (multi)
+          <select id="studentSubjects" multiple size="8">
+            <option>Mathematics</option>
+            <option>English</option>
+            <option>Physics</option>
+            <option>Chemistry</option>
+            <option>Biology</option>
+            <option>Economics</option>
+            <option>Government</option>
+            <option>Literature</option>
+            <option>Computer Science</option>
+            <option>Coding</option>
+          </select>
+        </label>
+        <button onclick="registerStudent()">Register Student</button>
+        <div id="studentMsg" class="muted"></div>
+      </section>
+    </div>
+
+    <script>
+      const api = (path) => `${location.origin}/api${path}`;
+      function getSelectedValues(select) { return Array.from(select.selectedOptions).map(o=>o.value); }
+      function loadClassOptions() {
+        const classSel = document.getElementById('studentClass');
+        classSel.innerHTML = ['Nursery', ...Array.from({length:12},(_,i)=>`Year ${i+1}`)].map(c=>`<option>${c}</option>`).join('');
+      }
+      async function registerStudent() {
+        const name = document.getElementById('studentName').value.trim();
+        const classLevel = document.getElementById('studentClass').value;
+        const enrolledSubjects = getSelectedValues(document.getElementById('studentSubjects'));
+        const res = await fetch(api('/students'), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, classLevel, enrolledSubjects }) });
+        const out = await res.json();
+        document.getElementById('studentMsg').textContent = res.ok ? 'Student registered' : out.message;
+        if (res.ok && enrolledSubjects.length) {
+          const tutors = await fetch(api('/students/suggest-tutors'), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ subjects: enrolledSubjects }) }).then(r=>r.json());
+          document.getElementById('studentMsg').textContent += ` | Suggested Tutors: ${tutors.map(t=>t.name).join(', ')}`;
+        }
+      }
+      loadClassOptions();
+    </script>
+  </body>
+  </html>
+
+
