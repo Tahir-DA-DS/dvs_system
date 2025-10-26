@@ -52,11 +52,18 @@
         const classSel = document.getElementById('crClass');
         classSel.innerHTML = ['Nursery', ...Array.from({length:12},(_,i)=>`Year ${i+1}`)].map(c=>`<option>${c}</option>`).join('');
       }
+      // function getRate(classLevel) {
+      //   const level = classLevel.toLowerCase();
+      //   if (level==='nursery' || /year\s*[1-6]/i.test(classLevel)) return 3800;
+      //   if (/year\s*(7|8|9|10)/i.test(classLevel)) return 4300;
+      //   if (/year\s*(11|12)/i.test(classLevel)) return 5000;
+      //   return 0;
+      // }
       function getRate(classLevel) {
-        const level = classLevel.toLowerCase();
-        if (level==='nursery' || /Year\s*[1-6]/i.test(classLevel)) return 3800;
-        if (/Year\s*(7|8|9|10)/i.test(classLevel)) return 4300;
-        if (/Year\s*(11|12)/i.test(classLevel)) return 5000;
+        const level = (classLevel || '').toLowerCase().trim();
+        if (level === 'nursery' || /\byear\s*(?:[1-6])\b/i.test(classLevel)) return 3800;
+        if (/\byear\s*(?:7|8|9|10)\b/i.test(classLevel)) return 4300;
+        if (/\byear\s*(?:11|12)\b/i.test(classLevel)) return 5000;
         return 0;
       }
       function recalc() {
