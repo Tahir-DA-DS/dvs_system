@@ -91,31 +91,73 @@
         const adTutor = document.getElementById('adTutor');
         adTutor.innerHTML = '<option value="">All Tutors</option>' + tutors.map(t=>`<option value="${t._id}">${t.name}</option>`).join('');
       }
-      async function downloadCSV() {
+      // async function downloadCSV() {
+      //   const tutorId = document.getElementById('adTutor').value;
+      //   const from = document.getElementById('adFrom').value;
+      //   const to = document.getElementById('adTo').value;
+      //   const url = new URL(api('/admin/export'));
+      //   url.searchParams.set('adminPassword', getPass());
+      //   if (tutorId) url.searchParams.set('tutorId', tutorId);
+      //   if (from) url.searchParams.set('from', from);
+      //   if (to) url.searchParams.set('to', to);
+      //   const a = document.createElement('a');
+      //   a.href = url.toString();
+      //   a.click();
+      // }
+       async function downloadCSV() {
         const tutorId = document.getElementById('adTutor').value;
         const from = document.getElementById('adFrom').value;
         const to = document.getElementById('adTo').value;
         const url = new URL(api('/admin/export'));
-        url.searchParams.set('adminPassword', getPass());
         if (tutorId) url.searchParams.set('tutorId', tutorId);
         if (from) url.searchParams.set('from', from);
         if (to) url.searchParams.set('to', to);
+
+        const res = await fetch(url.toString(), { headers: { 'x-admin-password': getPass() } });
+        if (!res.ok) { document.getElementById('adminMsg').textContent = 'Export failed'; return; }
+        const blob = await res.blob();
+        const filename = `records${from ? '-' + from : ''}${to ? '-' + to : ''}.csv`;
         const a = document.createElement('a');
-        a.href = url.toString();
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
         a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
       }
+      // async function downloadStudentSummaryCSV() {
+      //   const tutorId = document.getElementById('adTutor').value;
+      //   const from = document.getElementById('adFrom').value;
+      //   const to = document.getElementById('adTo').value;
+      //   const url = new URL(api('/admin/export-student-summary'));
+      //   url.searchParams.set('adminPassword', getPass());
+      //   if (tutorId) url.searchParams.set('tutorId', tutorId);
+      //   if (from) url.searchParams.set('from', from);
+      //   if (to) url.searchParams.set('to', to);
+      //   const a = document.createElement('a');
+      //   a.href = url.toString();
+      //   a.click();
+      // }
       async function downloadStudentSummaryCSV() {
         const tutorId = document.getElementById('adTutor').value;
         const from = document.getElementById('adFrom').value;
         const to = document.getElementById('adTo').value;
         const url = new URL(api('/admin/export-student-summary'));
-        url.searchParams.set('adminPassword', getPass());
         if (tutorId) url.searchParams.set('tutorId', tutorId);
         if (from) url.searchParams.set('from', from);
         if (to) url.searchParams.set('to', to);
+
+        const res = await fetch(url.toString(), { headers: { 'x-admin-password': getPass() } });
+        if (!res.ok) { document.getElementById('adminMsg').textContent = 'Export failed'; return; }
+        const blob = await res.blob();
+        const filename = `student-summary${from ? '-' + from : ''}${to ? '-' + to : ''}.csv`;
         const a = document.createElement('a');
-        a.href = url.toString();
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
         a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
       }
       async function approveLate() {
         const recordId = document.getElementById('lateRecordId').value.trim();
