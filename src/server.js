@@ -8,6 +8,7 @@ import tutorRouter from './tutors.js';
 import studentRouter from './students.js';
 import classRecordRouter from './classRecords.js';
 import adminRouter from './admin.js';
+import { Tutor, Student, AdminActionLog, ClassRecord} from './models.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,13 +33,20 @@ app.get('/', (_req, res) => {
 
 mongoose
   .connect(MONGO_URI)
-  .then(() => {
-    console.log('Connected to MongoDB');
-    app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+  .then(async () => {
+    console.log('✅ Connected to MongoDB');
+
+    // 🧩 Add this line — it automatically removes outdated indexes (like userId_1)
+    await Tutor.syncIndexes();
+    await Student.syncIndexes();
+    await ClassRecord.syncIndexes();
+    await AdminActionLog.syncIndexes();
+    
+    console.log('✅ Tutor indexes synchronized with schema');
+
+    app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
   })
   .catch((err) => {
-    console.error('MongoDB connection error:', err);
+    console.error('❌ MongoDB connection error:', err);
     process.exit(1);
   });
-
-
