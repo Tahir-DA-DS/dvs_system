@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 
+const { Schema } = mongoose; 
+
 const TutorSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
