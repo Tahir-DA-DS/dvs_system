@@ -177,6 +177,10 @@
         }
       });
       async function createClassRecord() {
+        const start = document.getElementById("crStart").value; // This is correct
+        const end = document.getElementById("crEnd").value; 
+         const s = new Date(start);
+          const e = new Date(end);
         const classLevel = document.getElementById("crClass").value;
         const rate = getRate(classLevel);
         const startTime = document.getElementById("crStart").value;
