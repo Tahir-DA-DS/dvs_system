@@ -40,12 +40,6 @@
           >Comment (optional)
           <textarea id="crComment"></textarea>
         </label>
-        <div>
-          Payment: <span id="crPayment">₦0</span>
-          <span class="muted" id="crRate"></span>
-        </div>
-        <button onclick="createClassRecord()">Submit Class Record</button>
-        <div id="crMsg" class="muted"></div>
         <div id="lateSubmissionForm" style="display: none">
           <h3>Late Submission</h3>
           <label>
@@ -54,6 +48,12 @@
           </label>
           <div class="muted">Note: Late submissions require admin approval</div>
         </div>
+        <div>
+          Payment: <span id="crPayment">₦0</span>
+          <span class="muted" id="crRate"></span>
+        </div>
+        <button onclick="createClassRecord()">Submit Class Record</button>
+        <div id="crMsg" class="muted"></div>
       </section>
     </div>
 
@@ -99,11 +99,33 @@
         if (/\byear\s*(?:11|12)\b/i.test(classLevel)) return 5000;
         return 0;
       }
+      // function recalc() {
+      //   const classLevel = document.getElementById("crClass").value;
+      //   const rate = getRate(classLevel);
+      //   const start = document.getElementById("crStart").value;
+      //   const end = document.getElementById("crEnd").value;
+      //   let amount = 0;
+      //   if (start && end) {
+      //     const s = new Date(start);
+      //     const e = new Date(end);
+      //     if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && e > s) {
+      //       const minutes = (e.getTime() - s.getTime()) / 60000;
+      //       const hours = minutes / 60;
+      //       amount = Math.round(rate * hours);
+      //     }
+      //   }
+      //   document.getElementById(
+      //     "crPayment"
+      //   ).textContent = `₦${amount.toLocaleString()}`;
+      //   document.getElementById("crRate").textContent = rate
+      //     ? `(₦${rate.toLocaleString()} / hr)`
+      //     : "";
+      // }
       function recalc() {
         const classLevel = document.getElementById("crClass").value;
         const rate = getRate(classLevel);
-        const start = document.getElementById("crStart").value;
-        const end = document.getElementById("crEnd").value;
+        const start = document.getElementById("crStart").value; // This is correct
+        const end = document.getElementById("crEnd").value; // This is correct
         let amount = 0;
         if (start && end) {
           const s = new Date(start);
