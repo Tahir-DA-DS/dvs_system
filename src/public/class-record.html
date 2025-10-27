@@ -91,13 +91,14 @@
       //   if (/year\s*(11|12)/i.test(classLevel)) return 5000;
       //   return 0;
       // }
-     function getRate(classLevel) {
-    const level = (classLevel || "").toLowerCase().trim();
-    if (level === "nursery" || /\byear\s*(?:[1-6])\b/i.test(classLevel)) return 3800;
-    if (/\byear\s*(?:7|8|9|10)\b/i.test(classLevel)) return 4300;
-    if (/\byear\s*(?:11|12)\b/i.test(classLevel)) return 5000;
-    return 0;
-}
+      function getRate(classLevel) {
+        const level = (classLevel || "").toLowerCase().trim();
+        if (level === "nursery" || /\byear\s*(?:[1-6])\b/i.test(classLevel))
+          return 3800;
+        if (/\byear\s*(?:7|8|9|10)\b/i.test(classLevel)) return 4300;
+        if (/\byear\s*(?:11|12)\b/i.test(classLevel)) return 5000;
+        return 0;
+      }
       // function recalc() {
       //   const classLevel = document.getElementById("crClass").value;
       //   const rate = getRate(classLevel);
@@ -177,7 +178,7 @@
       });
       async function createClassRecord() {
         const startTime = document.getElementById("crStart").value;
-         const amount = Math.round(rate * hours);
+        const amount = Math.round(rate * hours);
         const isLate =
           dayjs(startTime).format("YYYY-MM-DD") !==
           dayjs().format("YYYY-MM-DD");
@@ -189,7 +190,7 @@
           topic: document.getElementById("crTopic").value,
           startTime: document.getElementById("crStart").value,
           endTime: document.getElementById("crEnd").value,
-           paymentAmount: amount,
+          paymentAmount: amount,
           comment: document.getElementById("crComment").value,
         };
         // const res = await fetch(api("/class-records"), {
@@ -222,11 +223,13 @@
         });
 
         const out = await res.json();
-        document.getElementById("crMsg").textContent = res.ok
-          ? isLate
-            ? "Record submitted for approval"
-            : "Record submitted successfully"
-          : out.message;
+        if (res.ok) {
+          document.getElementById(
+            "crMsg"
+          ).textContent = `Record submitted successfully! Your Record ID is: ${out.recordId}. Please contact the admin with this ID for approval.`;
+        } else {
+          document.getElementById("crMsg").textContent = out.message;
+        }
       }
       loadDropdowns();
     </script>
