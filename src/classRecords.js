@@ -122,13 +122,16 @@ router.post("/late-submission", async (req, res) => {
       reason,
     } = req.body;
 
-    // Validate inputs
-    if (!reason)
-      return res
-        .status(400)
-        .json({ message: "Reason for late submission required" });
+    if (!reason) {
+      return res.status(400).json({ message: "Reason for late submission required" });
+    }
 
-    // Create record with pending status
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({ message: "Invalid start or end time" });
+    }
+
     const paymentAmount = calculatePaymentAmount(classLevel, start, end);
     const record = await ClassRecord.create({
       tutorId,
@@ -136,8 +139,8 @@ router.post("/late-submission", async (req, res) => {
       classLevel,
       subject,
       topic,
-      startTime: new Date(startTime),
-      endTime: new Date(endTime),
+      startTime: start,
+      endTime: end,
       dateSubmitted: new Date(),
       paymentAmount,
       status: "Pending Approval",
@@ -150,7 +153,8 @@ router.post("/late-submission", async (req, res) => {
 
     res.status(201).json(record);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error(err); // Log the error for debugging
+    res.status(500).json({ message: "An error occurred while processing your request." });
   }
 });
 
