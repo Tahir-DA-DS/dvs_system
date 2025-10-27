@@ -91,14 +91,13 @@
       //   if (/year\s*(11|12)/i.test(classLevel)) return 5000;
       //   return 0;
       // }
-      function getRate(classLevel) {
-        const level = (classLevel || "").toLowerCase().trim();
-        if (level === "nursery" || /\byear\s*(?:[1-6])\b/i.test(classLevel))
-          return 3800;
-        if (/\byear\s*(?:7|8|9|10)\b/i.test(classLevel)) return 4300;
-        if (/\byear\s*(?:11|12)\b/i.test(classLevel)) return 5000;
-        return 0;
-      }
+     function getRate(classLevel) {
+    const level = (classLevel || "").toLowerCase().trim();
+    if (level === "nursery" || /\byear\s*(?:[1-6])\b/i.test(classLevel)) return 3800;
+    if (/\byear\s*(?:7|8|9|10)\b/i.test(classLevel)) return 4300;
+    if (/\byear\s*(?:11|12)\b/i.test(classLevel)) return 5000;
+    return 0;
+}
       // function recalc() {
       //   const classLevel = document.getElementById("crClass").value;
       //   const rate = getRate(classLevel);
@@ -189,6 +188,7 @@
           topic: document.getElementById("crTopic").value,
           startTime: document.getElementById("crStart").value,
           endTime: document.getElementById("crEnd").value,
+           paymentAmount: amount,
           comment: document.getElementById("crComment").value,
         };
         // const res = await fetch(api("/class-records"), {
