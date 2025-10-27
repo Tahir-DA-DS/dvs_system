@@ -32,7 +32,18 @@ const ClassRecordSchema = new mongoose.Schema(
     paymentAmount: { type: Number, required: true },
     status: { type: String, enum: ['Valid', 'Late Approved'], default: 'Valid' },
     lateApprovedBy: { type: String },
-    lateApprovedAt: { type: Date }
+    lateApprovedAt: { type: Date },
+    status: {
+    type: String,
+    enum: ['Valid', 'Pending Approval', 'Approved', 'Rejected'],
+    default: 'Valid'
+  },
+  approvalRequest: {
+    reason: String,
+    requestDate: Date,
+    approvedBy: { type: Schema.Types.ObjectId, ref: 'Admin' },
+    approvalDate: Date
+  }
   },
   { timestamps: true }
 );

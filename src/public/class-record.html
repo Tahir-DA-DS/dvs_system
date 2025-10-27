@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -26,15 +26,31 @@
         <label>Subject<select id="crSubject"></select></label>
         <label>Topic<input id="crTopic" /></label>
         <div class="row">
-          <label style="flex:1">Start Time<input type="datetime-local" id="crStart" /></label>
-          <label style="flex:1">End Time<input type="datetime-local" id="crEnd" /></label>
+          <label style="flex: 1"
+            >Start Time<input type="datetime-local" id="crStart"
+          /></label>
+          <label style="flex: 1"
+            >End Time<input type="datetime-local" id="crEnd"
+          /></label>
         </div>
-        <label>Comment (optional)
+        <label
+          >Comment (optional)
           <textarea id="crComment"></textarea>
         </label>
-        <div>Payment: <span id="crPayment">₦0</span> <span class="muted" id="crRate"></span></div>
+        <div>
+          Payment: <span id="crPayment">₦0</span>
+          <span class="muted" id="crRate"></span>
+        </div>
         <button onclick="createClassRecord()">Submit Class Record</button>
         <div id="crMsg" class="muted"></div>
+        <div id="lateSubmissionForm" style="display: none">
+          <h3>Late Submission</h3>
+          <label>
+            Reason for late submission:
+            <textarea id="crLateReason" required></textarea>
+          </label>
+          <div class="muted">Note: Late submissions require admin approval</div>
+        </div>
       </section>
     </div>
 
@@ -42,15 +58,28 @@
       const api = (path) => `${location.origin}/api${path}`;
       async function loadDropdowns() {
         const [tutors, students] = await Promise.all([
-          fetch(api('/tutors')).then(r=>r.json()),
-          fetch(api('/students')).then(r=>r.json())
+          fetch(api("/tutors")).then((r) => r.json()),
+          fetch(api("/students")).then((r) => r.json()),
         ]);
-        const tutorSel = document.getElementById('crTutor');
-        tutorSel.innerHTML = '<option value="">Select Tutor</option>' + tutors.map(t=>`<option value="${t._id}">${t.name}</option>`).join('');
-        const studentSel = document.getElementById('crStudent');
-        studentSel.innerHTML = '<option value="">Select Student</option>' + students.map(s=>`<option value="${s._id}">${s.name}</option>`).join('');
-        const classSel = document.getElementById('crClass');
-        classSel.innerHTML = ['Nursery', ...Array.from({length:12},(_,i)=>`Year ${i+1}`)].map(c=>`<option>${c}</option>`).join('');
+        const tutorSel = document.getElementById("crTutor");
+        tutorSel.innerHTML =
+          '<option value="">Select Tutor</option>' +
+          tutors
+            .map((t) => `<option value="${t._id}">${t.name}</option>`)
+            .join("");
+        const studentSel = document.getElementById("crStudent");
+        studentSel.innerHTML =
+          '<option value="">Select Student</option>' +
+          students
+            .map((s) => `<option value="${s._id}">${s.name}</option>`)
+            .join("");
+        const classSel = document.getElementById("crClass");
+        classSel.innerHTML = [
+          "Nursery",
+          ...Array.from({ length: 12 }, (_, i) => `Year ${i + 1}`),
+        ]
+          .map((c) => `<option>${c}</option>`)
+          .join("");
       }
       // function getRate(classLevel) {
       //   const level = classLevel.toLowerCase();
@@ -60,17 +89,18 @@
       //   return 0;
       // }
       function getRate(classLevel) {
-        const level = (classLevel || '').toLowerCase().trim();
-        if (level === 'nursery' || /\byear\s*(?:[1-6])\b/i.test(classLevel)) return 3800;
+        const level = (classLevel || "").toLowerCase().trim();
+        if (level === "nursery" || /\byear\s*(?:[1-6])\b/i.test(classLevel))
+          return 3800;
         if (/\byear\s*(?:7|8|9|10)\b/i.test(classLevel)) return 4300;
         if (/\byear\s*(?:11|12)\b/i.test(classLevel)) return 5000;
         return 0;
       }
       function recalc() {
-        const classLevel = document.getElementById('crClass').value;
+        const classLevel = document.getElementById("crClass").value;
         const rate = getRate(classLevel);
-        const start = document.getElementById('crStart').value;
-        const end = document.getElementById('crEnd').value;
+        const start = document.getElementById("crStart").value;
+        const end = document.getElementById("crEnd").value;
         let amount = 0;
         if (start && end) {
           const s = new Date(start);
@@ -81,43 +111,98 @@
             amount = Math.round(rate * hours);
           }
         }
-        document.getElementById('crPayment').textContent = `₦${amount.toLocaleString()}`;
-        document.getElementById('crRate').textContent = rate ? `(₦${rate.toLocaleString()} / hr)` : '';
+        document.getElementById(
+          "crPayment"
+        ).textContent = `₦${amount.toLocaleString()}`;
+        document.getElementById("crRate").textContent = rate
+          ? `(₦${rate.toLocaleString()} / hr)`
+          : "";
       }
-      document.addEventListener('change', (e)=>{
-        if (['crClass','crStart','crEnd'].includes(e.target.id)) recalc();
+      function checkLateSubmission() {
+        const startTime = document.getElementById("crStart").value;
+        const isLate =
+          dayjs(startTime).format("YYYY-MM-DD") !==
+          dayjs().format("YYYY-MM-DD");
+        document.getElementById("lateSubmissionForm").style.display = isLate
+          ? "block"
+          : "none";
+      }
+      document
+        .getElementById("crStart")
+        .addEventListener("change", checkLateSubmission);
+      document.addEventListener("change", (e) => {
+        if (["crClass", "crStart", "crEnd"].includes(e.target.id)) recalc();
       });
-      document.addEventListener('input', (e)=>{
-        if (['crStart','crEnd'].includes(e.target.id)) recalc();
+      document.addEventListener("input", (e) => {
+        if (["crStart", "crEnd"].includes(e.target.id)) recalc();
       });
-      document.addEventListener('change', async (e)=>{
-        if (e.target && e.target.id === 'crTutor') {
-          const tutorId = document.getElementById('crTutor').value;
-          const subjectSel = document.getElementById('crSubject');
-          if (!tutorId) { subjectSel.innerHTML = ''; return; }
-          const tutors = await fetch(api('/tutors')).then(r=>r.json());
-          const tutor = tutors.find(t=>t._id===tutorId);
-          subjectSel.innerHTML = tutor ? tutor.subjects.map(s=>`<option>${s}</option>`).join('') : '';
+      document.addEventListener("change", async (e) => {
+        if (e.target && e.target.id === "crTutor") {
+          const tutorId = document.getElementById("crTutor").value;
+          const subjectSel = document.getElementById("crSubject");
+          if (!tutorId) {
+            subjectSel.innerHTML = "";
+            return;
+          }
+          const tutors = await fetch(api("/tutors")).then((r) => r.json());
+          const tutor = tutors.find((t) => t._id === tutorId);
+          subjectSel.innerHTML = tutor
+            ? tutor.subjects.map((s) => `<option>${s}</option>`).join("")
+            : "";
         }
       });
       async function createClassRecord() {
+        const startTime = document.getElementById("crStart").value;
+        const isLate =
+          dayjs(startTime).format("YYYY-MM-DD") !==
+          dayjs().format("YYYY-MM-DD");
         const payload = {
-          tutorId: document.getElementById('crTutor').value,
-          studentId: document.getElementById('crStudent').value,
-          classLevel: document.getElementById('crClass').value,
-          subject: document.getElementById('crSubject').value,
-          topic: document.getElementById('crTopic').value,
-          startTime: document.getElementById('crStart').value,
-          endTime: document.getElementById('crEnd').value,
-          comment: document.getElementById('crComment').value
+          tutorId: document.getElementById("crTutor").value,
+          studentId: document.getElementById("crStudent").value,
+          classLevel: document.getElementById("crClass").value,
+          subject: document.getElementById("crSubject").value,
+          topic: document.getElementById("crTopic").value,
+          startTime: document.getElementById("crStart").value,
+          endTime: document.getElementById("crEnd").value,
+          comment: document.getElementById("crComment").value,
         };
-        const res = await fetch(api('/class-records'), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        // const res = await fetch(api("/class-records"), {
+        //   method: "POST",
+        //   headers: { "Content-Type": "application/json" },
+        //   body: JSON.stringify(payload),
+        // });
+        // const out = await res.json();
+        // document.getElementById("crMsg").textContent = res.ok
+        //   ? "Class record saved"
+        //   : out.message;
+        if (isLate) {
+          const reason = document.getElementById("crLateReason").value;
+          if (!reason) {
+            document.getElementById("crMsg").textContent =
+              "Please provide a reason for late submission";
+            return;
+          }
+          payload.reason = reason;
+        }
+
+        const endpoint = isLate
+          ? "/class-records/late-submission"
+          : "/class-records";
+
+        const res = await fetch(api(endpoint), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
         const out = await res.json();
-        document.getElementById('crMsg').textContent = res.ok ? 'Class record saved' : out.message;
+        document.getElementById("crMsg").textContent = res.ok
+          ? isLate
+            ? "Record submitted for approval"
+            : "Record submitted successfully"
+          : out.message;
       }
       loadDropdowns();
     </script>
   </body>
-  </html>
-
-
+</html>
