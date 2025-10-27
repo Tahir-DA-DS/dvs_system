@@ -180,6 +180,8 @@
         const classLevel = document.getElementById("crClass").value;
         const rate = getRate(classLevel);
         const startTime = document.getElementById("crStart").value;
+         const minutes = (e.getTime() - s.getTime()) / 60000;
+        const hours = minutes / 60;
         const amount = Math.round(rate * hours);
         const isLate =
           dayjs(startTime).format("YYYY-MM-DD") !==
