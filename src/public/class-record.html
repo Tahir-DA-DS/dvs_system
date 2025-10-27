@@ -177,6 +177,8 @@
         }
       });
       async function createClassRecord() {
+        const classLevel = document.getElementById("crClass").value;
+        const rate = getRate(classLevel);
         const startTime = document.getElementById("crStart").value;
         const amount = Math.round(rate * hours);
         const isLate =
