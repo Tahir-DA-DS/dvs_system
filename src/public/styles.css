@@ -183,5 +183,60 @@ thead th { position: sticky; top: 0; z-index: 1; }
 .toast.success { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.35); }
 .toast.error { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.35); }
 
+#recordsTable {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed; /* keeps columns stable */
+  font-size: 14px;
+}
+
+#recordsTable th, #recordsTable td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e6e6e6;
+  vertical-align: middle;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#recordsTable thead th {
+  background: #fafafa;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/* make checkbox & actions columns compact */
+#recordsTable .col-checkbox { text-align:center; }
+#recordsTable .col-actions { white-space: nowrap; text-align: center; }
+
+/* allow subject/topic to wrap on small screens but still show ellipsis in cell */
+#recordsTable td.col-topic,
+#recordsTable td.col-subject {
+  white-space: nowrap;
+  max-width: 220px;
+}
+
+/* zebra rows */
+#recordsTable tbody tr:nth-child(odd) { background: #fff; }
+#recordsTable tbody tr:nth-child(even) { background: #fbfbfb; }
+
+/* hover */
+#recordsTable tbody tr:hover { background: #f2f8ff; }
+
+/* small buttons */
+button.small {
+  padding: 4px 8px;
+  font-size: 12px;
+  margin: 0 2px;
+}
+
+/* responsive: allow horizontal scroll on very small screens (container already has overflow:auto) */
+@media (max-width: 900px) {
+  #recordsTable th, #recordsTable td { padding: 6px 8px; font-size: 13px; }
+  #recordsTable colgroup col:nth-child(7) { width: 160px; } /* shrink topic */
+}
+
 
 

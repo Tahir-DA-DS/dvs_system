@@ -80,6 +80,20 @@
         </div>
         <div style="overflow: auto; margin-top: 10px">
           <table id="recordsTable">
+            <colgroup>
+              <col style="width: 40px" />
+              <col style="width: 110px" />
+              <col style="width: 160px" />
+              <col style="width: 160px" />
+              <col style="width: 80px" />
+              <col style="width: 140px" />
+              <col style="width: 220px" />
+              <col style="width: 150px" />
+              <col style="width: 150px" />
+              <col style="width: 110px" />
+              <col style="width: 120px" />
+              <col style="width: 120px" />
+            </colgroup>
             <thead>
               <tr>
                 <th>
@@ -303,30 +317,63 @@
         if (!resp.ok) return;
         const rows = await resp.json();
         const tbody = document.querySelector("#recordsTable tbody");
+
+        // small helper to truncate display but keep full value on hover
+        const tr = (s, n = 40) =>
+          s && s.length > n ? s.slice(0, n - 1) + "…" : s || "";
+
         tbody.innerHTML = rows
-          .map(
-            (r) => `
+          .map((r) => {
+            const date = new Date(r.dateSubmitted || r.startTime);
+            const dateDisplay = isNaN(date.getTime())
+              ? ""
+              : date.toLocaleDateString();
+            const startDisplay = r.startTime
+              ? new Date(r.startTime).toLocaleString()
+              : "";
+            const endDisplay = r.endTime
+              ? new Date(r.endTime).toLocaleString()
+              : "";
+            return `
       <tr data-id="${r._id}">
-        <td><input type="checkbox" class="record-select" value="${r._id}"></td>
-        <td>${new Date(r.dateSubmitted).toLocaleDateString()}</td>
-        <td>${r.tutorId?.name || ""}</td>
-        <td>${r.studentId?.name || ""}</td>
-        <td>${r.classLevel}</td>
-        <td>${r.subject}</td>
-        <td>${r.topic}</td>
-        <td>${new Date(r.startTime).toLocaleString()}</td>
-        <td>${new Date(r.endTime).toLocaleString()}</td>
-        <td>${(r.paymentAmount || 0).toLocaleString()}</td>
-        <td>${r.status}</td>
-        <td>
+        <td class="col-checkbox"><input type="checkbox" class="record-select" value="${
+          r._id
+        }"></td>
+        <td class="col-date" title="${dateDisplay}">${dateDisplay}</td>
+        <td class="col-tutor" title="${r.tutorId?.name || ""}">${tr(
+              r.tutorId?.name,
+              20
+            )}</td>
+        <td class="col-student" title="${r.studentId?.name || ""}">${tr(
+              r.studentId?.name,
+              20
+            )}</td>
+        <td class="col-class" title="${r.classLevel || ""}">${
+              r.classLevel || ""
+            }</td>
+        <td class="col-subject" title="${r.subject || ""}">${tr(
+              r.subject,
+              24
+            )}</td>
+        <td class="col-topic" title="${r.topic || ""}">${tr(r.topic, 36)}</td>
+        <td class="col-start" title="${startDisplay}">${tr(
+              startDisplay,
+              20
+            )}</td>
+        <td class="col-end" title="${endDisplay}">${tr(endDisplay, 20)}</td>
+        <td class="col-amount" title="${(
+          r.paymentAmount || 0
+        ).toLocaleString()}">₦${(r.paymentAmount || 0).toLocaleString()}</td>
+        <td class="col-status" title="${r.status || ""}">${r.status || ""}</td>
+        <td class="col-actions">
           <button onclick="editRecord('${r._id}')" class="small">Edit</button>
           <button onclick="deleteRecord('${
             r._id
           }')" class="small danger">Delete</button>
         </td>
       </tr>
-    `
-          )
+    `;
+          })
           .join("");
       }
       function toggleSelectAll() {
