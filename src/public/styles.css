@@ -223,7 +223,7 @@ thead th { position: sticky; top: 0; z-index: 1; }
 #recordsTable tbody tr:nth-child(even) { background: #fbfbfb; }
 
 /* hover */
-#recordsTable tbody tr:hover { background: #f2f8ff; }
+#recordsTable tbody tr:hover { background: #0b1220; }
 
 /* small buttons */
 button.small {
