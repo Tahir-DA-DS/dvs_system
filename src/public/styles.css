@@ -201,7 +201,7 @@ thead th { position: sticky; top: 0; z-index: 1; }
 }
 
 #recordsTable thead th {
-  background: #fafafa;
+  background: #0b1220;
   position: sticky;
   top: 0;
   z-index: 2;
@@ -223,7 +223,7 @@ thead th { position: sticky; top: 0; z-index: 1; }
 #recordsTable tbody tr:nth-child(even) { background: #fbfbfb; }
 
 /* hover */
-#recordsTable tbody tr:hover { background: #0b1220; }
+#recordsTable tbody tr:hover { background: #f2f8ff; }
 
 /* small buttons */
 button.small {
