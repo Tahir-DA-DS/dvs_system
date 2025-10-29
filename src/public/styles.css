@@ -146,18 +146,6 @@ thead th { position: sticky; top: 0; z-index: 1; }
   table-layout: fixed; /* keep column widths stable */
 }
 
-#recordsTable th:first-child,
-#recordsTable td:first-child {
-  width: 36px;          
-  text-align: center;
-  white-space: nowrap;
-}
-
-.record-select {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-}
 /* Toasts and messages */
 .toast {
   padding: 10px 12px;
