@@ -192,20 +192,23 @@ thead th { position: sticky; top: 0; z-index: 1; }
 
 #recordsTable th, #recordsTable td {
   padding: 8px 10px;
-  border-bottom: 1px solid #e6e6e6;
+  border-bottom: 1px solid var(--border); /* use dark border */
   vertical-align: middle;
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text); /* ensure readable text color */
+  background: transparent; /* don't force white background */
 }
 
 #recordsTable thead th {
-  background: #0b1220;
+  background: rgba(255,255,255,0.03); /* subtle header tint on dark panel */
   position: sticky;
   top: 0;
   z-index: 2;
 }
+
 
 /* make checkbox & actions columns compact */
 #recordsTable .col-checkbox { text-align:center; }
@@ -218,13 +221,12 @@ thead th { position: sticky; top: 0; z-index: 1; }
   max-width: 220px;
 }
 
-/* zebra rows */
-#recordsTable tbody tr:nth-child(odd) { background: #fff; }
-#recordsTable tbody tr:nth-child(even) { background: #fbfbfb; }
+/* dark zebra rows */
+#recordsTable tbody tr:nth-child(odd) { background: rgba(255,255,255,0.02); }
+#recordsTable tbody tr:nth-child(even) { background: rgba(255,255,255,0.01); }
 
 /* hover */
-#recordsTable tbody tr:hover { background: #f2f8ff; }
-
+#recordsTable tbody tr:hover { background: rgba(37,99,235,0.06); }
 /* small buttons */
 button.small {
   padding: 4px 8px;
