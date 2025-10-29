@@ -295,4 +295,126 @@ router.patch("/:recordId/approve", async (req, res) => {
   }
 });
 
+router.delete("/:id", async (req, res) => {
+  try {
+    const record = await ClassRecord.findById(req.params.id);
+    if (!record) {
+      return res.status(404).json({ message: "Record not found" });
+    }
+    
+    await record.deleteOne();
+    res.json({ message: "Record deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Bulk delete records
+router.delete("/bulk-delete", async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || !ids.length) {
+      return res.status(400).json({ message: "No records specified for deletion" });
+    }
+
+    const result = await ClassRecord.deleteMany({ _id: { $in: ids } });
+    res.json({ 
+      message: `${result.deletedCount} records deleted successfully` 
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Get pending records
+router.get("/pending", async (req, res) => {
+  try {
+    const records = await ClassRecord.find({ status: "Pending Approval" })
+      .populate("tutorId")
+      .populate("studentId")
+      .sort({ dateSubmitted: -1 });
+    
+    res.json(records);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Approve/reject pending record
+router.patch("/:id/approve", async (req, res) => {
+  try {
+    const { approved, adminId } = req.body;
+    const record = await ClassRecord.findById(req.params.id);
+    
+    if (!record) {
+      return res.status(404).json({ message: "Record not found" });
+    }
+    
+    if (record.status !== "Pending Approval") {
+      return res.status(400).json({ message: "Record is not pending approval" });
+    }
+    
+    record.status = approved ? "Approved" : "Rejected";
+    record.approvalRequest.approvedBy = adminId;
+    record.approvalRequest.approvalDate = new Date();
+    
+    await record.save();
+    res.json(record);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Update record
+router.put("/:id", async (req, res) => {
+  try {
+    const { 
+      tutorId, 
+      studentId, 
+      classLevel, 
+      subject, 
+      topic, 
+      startTime, 
+      endTime, 
+      comment 
+    } = req.body;
+
+    const record = await ClassRecord.findById(req.params.id);
+    if (!record) {
+      return res.status(404).json({ message: "Record not found" });
+    }
+
+    // Validate inputs
+    const tutor = await Tutor.findById(tutorId);
+    const student = await Student.findById(studentId);
+    
+    if (!tutor || !student) {
+      return res.status(404).json({ message: "Tutor or Student not found" });
+    }
+
+    if (!tutor.subjects.includes(subject)) {
+      return res.status(400).json({ 
+        message: "Selected subject is not in tutor's subjects" 
+      });
+    }
+
+    // Update record
+    Object.assign(record, {
+      tutorId,
+      studentId,
+      classLevel,
+      subject,
+      topic,
+      startTime: new Date(startTime),
+      endTime: new Date(endTime),
+      comment
+    });
+
+    await record.save();
+    res.json(record);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 export default router;

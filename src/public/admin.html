@@ -73,6 +73,11 @@
           <button onclick="loadRecords()">Refresh</button>
           <button onclick="downloadCSV()">Download Displayed CSV</button>
         </div>
+        <div class="row" style="margin-bottom: 10px">
+          <button onclick="loadRecords()">Refresh</button>
+          <button onclick="downloadCSV()">Download Displayed CSV</button>
+          <button onclick="bulkDelete()" class="danger">Delete Selected</button>
+        </div>
         <div style="overflow: auto; margin-top: 10px">
           <table id="recordsTable">
             <thead>
@@ -87,6 +92,7 @@
                 <th>End</th>
                 <th>Amount (₦)</th>
                 <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -228,22 +234,138 @@
         tbody.innerHTML = rows
           .map(
             (r) => `
-          <tr>
-            <td>${new Date(r.dateSubmitted).toLocaleDateString()}</td>
-            <td>${r.tutorId?.name || ""}</td>
-            <td>${r.studentId?.name || ""}</td>
-            <td>${r.classLevel}</td>
-            <td>${r.subject}</td>
-            <td>${r.topic}</td>
-            <td>${new Date(r.startTime).toLocaleString()}</td>
-            <td>${new Date(r.endTime).toLocaleString()}</td>
-            <td>${(r.paymentAmount || 0).toLocaleString()}</td>
-            <td>${r.status}</td>
-          </tr>
-        `
+      <tr data-id="${r._id}">
+        <td><input type="checkbox" class="record-select" value="${r._id}"></td>
+        <td>${new Date(r.dateSubmitted).toLocaleDateString()}</td>
+        <td>${r.tutorId?.name || ""}</td>
+        <td>${r.studentId?.name || ""}</td>
+        <td>${r.classLevel}</td>
+        <td>${r.subject}</td>
+        <td>${r.topic}</td>
+        <td>${new Date(r.startTime).toLocaleString()}</td>
+        <td>${new Date(r.endTime).toLocaleString()}</td>
+        <td>${(r.paymentAmount || 0).toLocaleString()}</td>
+        <td>${r.status}</td>
+        <td>
+          <button onclick="editRecord('${r._id}')" class="small">Edit</button>
+          <button onclick="deleteRecord('${
+            r._id
+          }')" class="small danger">Delete</button>
+        </td>
+      </tr>
+    `
           )
           .join("");
       }
+      function toggleSelectAll() {
+        const selectAll = document.getElementById("selectAll");
+        const checkboxes = document.querySelectorAll(".record-select");
+        checkboxes.forEach(
+          (checkbox) => (checkbox.checked = selectAll.checked)
+        );
+      }
+
+      async function bulkDelete() {
+        const selected = Array.from(
+          document.querySelectorAll(".record-select:checked")
+        ).map((checkbox) => checkbox.value);
+
+        if (!selected.length) {
+          document.getElementById("adminMsg").textContent =
+            "No records selected";
+          return;
+        }
+
+        if (!confirm(`Delete ${selected.length} selected records?`)) return;
+
+        try {
+          const res = await fetch(api("/class-records/bulk-delete"), {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              "x-admin-password": getPass(),
+            },
+            body: JSON.stringify({ ids: selected }),
+          });
+
+          if (res.ok) {
+            document.getElementById("adminMsg").textContent =
+              "Records deleted successfully";
+            loadRecords();
+          } else {
+            const data = await res.json();
+            document.getElementById("adminMsg").textContent =
+              data.message || "Delete failed";
+          }
+        } catch (err) {
+          document.getElementById("adminMsg").textContent = "Network error";
+        }
+      }
+
+      async function bulkDelete() {
+        const selected = Array.from(
+          document.querySelectorAll(".record-select:checked")
+        ).map((checkbox) => checkbox.value);
+
+        if (!selected.length) {
+          document.getElementById("adminMsg").textContent =
+            "No records selected";
+          return;
+        }
+
+        if (!confirm(`Delete ${selected.length} selected records?`)) return;
+
+        try {
+          const res = await fetch(api("/class-records/bulk-delete"), {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              "x-admin-password": getPass(),
+            },
+            body: JSON.stringify({ ids: selected }),
+          });
+
+          if (res.ok) {
+            document.getElementById("adminMsg").textContent =
+              "Records deleted successfully";
+            loadRecords();
+          } else {
+            const data = await res.json();
+            document.getElementById("adminMsg").textContent =
+              data.message || "Delete failed";
+          }
+        } catch (err) {
+          document.getElementById("adminMsg").textContent = "Network error";
+        }
+      }
+
+      async function deleteRecord(id) {
+        if (!confirm("Delete this record?")) return;
+
+        try {
+          const res = await fetch(api(`/class-records/${id}`), {
+            method: "DELETE",
+            headers: { "x-admin-password": getPass() },
+          });
+
+          if (res.ok) {
+            document.getElementById("adminMsg").textContent = "Record deleted";
+            loadRecords();
+          } else {
+            const data = await res.json();
+            document.getElementById("adminMsg").textContent =
+              data.message || "Delete failed";
+          }
+        } catch (err) {
+          document.getElementById("adminMsg").textContent = "Network error";
+        }
+      }
+
+      async function editRecord(id) {
+        // You can implement this to open a modal or redirect to an edit page
+        window.location.href = `/edit-record.html?id=${id}`;
+      }
+
       async function loadPendingRecords() {
         const resp = await fetch(api("/class-records/pending"), {
           headers: { "x-admin-password": getPass() },
