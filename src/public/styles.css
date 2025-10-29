@@ -140,6 +140,24 @@ thead th { position: sticky; top: 0; z-index: 1; }
   table { font-size: 14px; }
 }
 
+#recordsTable {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed; /* keep column widths stable */
+}
+
+#recordsTable th:first-child,
+#recordsTable td:first-child {
+  width: 36px;          
+  text-align: center;
+  white-space: nowrap;
+}
+
+.record-select {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
 /* Toasts and messages */
 .toast {
   padding: 10px 12px;
@@ -149,5 +167,6 @@ thead th { position: sticky; top: 0; z-index: 1; }
 }
 .toast.success { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.35); }
 .toast.error { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.35); }
+
 
 
