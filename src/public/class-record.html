@@ -84,13 +84,7 @@
           .map((c) => `<option>${c}</option>`)
           .join("");
       }
-      // function getRate(classLevel) {
-      //   const level = classLevel.toLowerCase();
-      //   if (level==='nursery' || /year\s*[1-6]/i.test(classLevel)) return 3800;
-      //   if (/year\s*(7|8|9|10)/i.test(classLevel)) return 4300;
-      //   if (/year\s*(11|12)/i.test(classLevel)) return 5000;
-      //   return 0;
-      // }
+
       function getRate(classLevel) {
         const level = (classLevel || "").toLowerCase().trim();
         if (level === "nursery" || /\byear\s*(?:[1-6])\b/i.test(classLevel))
@@ -99,28 +93,7 @@
         if (/\byear\s*(?:11|12)\b/i.test(classLevel)) return 5000;
         return 0;
       }
-      // function recalc() {
-      //   const classLevel = document.getElementById("crClass").value;
-      //   const rate = getRate(classLevel);
-      //   const start = document.getElementById("crStart").value;
-      //   const end = document.getElementById("crEnd").value;
-      //   let amount = 0;
-      //   if (start && end) {
-      //     const s = new Date(start);
-      //     const e = new Date(end);
-      //     if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && e > s) {
-      //       const minutes = (e.getTime() - s.getTime()) / 60000;
-      //       const hours = minutes / 60;
-      //       amount = Math.round(rate * hours);
-      //     }
-      //   }
-      //   document.getElementById(
-      //     "crPayment"
-      //   ).textContent = `₦${amount.toLocaleString()}`;
-      //   document.getElementById("crRate").textContent = rate
-      //     ? `(₦${rate.toLocaleString()} / hr)`
-      //     : "";
-      // }
+
       function recalc() {
         const classLevel = document.getElementById("crClass").value;
         const rate = getRate(classLevel);
@@ -177,68 +150,89 @@
         }
       });
       async function createClassRecord() {
-        const start = document.getElementById("crStart").value; // This is correct
-        const end = document.getElementById("crEnd").value; 
-         const s = new Date(start);
-          const e = new Date(end);
+        const start = document.getElementById("crStart").value;
+        const end = document.getElementById("crEnd").value;
+        const s = new Date(start);
+        const e = new Date(end);
+
         const classLevel = document.getElementById("crClass").value;
         const rate = getRate(classLevel);
+
         const startTime = document.getElementById("crStart").value;
-         const minutes = (e.getTime() - s.getTime()) / 60000;
+        const endTime = document.getElementById("crEnd").value;
+        const minutes = (e.getTime() - s.getTime()) / 60000;
         const hours = minutes / 60;
         const amount = Math.round(rate * hours);
+
+        // ✅ Duration validation — only allow 30 min, 1 hr, 1 hr 30 min, or 2 hrs
+        const allowedDurations = [30, 60, 90, 120];
+        if (!allowedDurations.includes(minutes)) {
+          document.getElementById("crMsg").textContent =
+            "Invalid class duration. Allowed durations are 30 min, 1 hr, 1 hr 30 min, or 2 hrs.";
+          return;
+        }
+
         const isLate =
           dayjs(startTime).format("YYYY-MM-DD") !==
           dayjs().format("YYYY-MM-DD");
+
+        // ✅ Build payload
         const payload = {
           tutorId: document.getElementById("crTutor").value,
           studentId: document.getElementById("crStudent").value,
-          classLevel: document.getElementById("crClass").value,
+          classLevel,
           subject: document.getElementById("crSubject").value,
           topic: document.getElementById("crTopic").value,
-          startTime: document.getElementById("crStart").value,
-          endTime: document.getElementById("crEnd").value,
+          startTime,
+          endTime,
           paymentAmount: amount,
           comment: document.getElementById("crComment").value,
+          status: isLate ? "Pending Approval" : "Valid",
         };
-        // const res = await fetch(api("/class-records"), {
-        //   method: "POST",
-        //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify(payload),
-        // });
-        // const out = await res.json();
-        // document.getElementById("crMsg").textContent = res.ok
-        //   ? "Class record saved"
-        //   : out.message;
+
+        // ✅ Handle late submissions
         if (isLate) {
           const reason = document.getElementById("crLateReason").value;
           if (!reason) {
             document.getElementById("crMsg").textContent =
-              "Please provide a reason for late submission";
+              "Please provide a reason for late submission.";
             return;
           }
           payload.reason = reason;
         }
 
+        // ✅ Pick correct endpoint
         const endpoint = isLate
           ? "/class-records/late-submission"
           : "/class-records";
 
-        const res = await fetch(api(endpoint), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        try {
+          const res = await fetch(api(endpoint), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
 
-        const out = await res.json();
-        if (res.ok) {
-          document.getElementById(
-            "crMsg"
-          ).textContent = `Record submitted successfully! Your Record ID is: ${out.recordId}. Please contact the admin with this ID for approval.`;
-        } else {
-          document.getElementById("crMsg").textContent = out.message;
+          const out = await res.json();
+          if (res.ok) {
+            document.getElementById("crMsg").textContent = isLate
+              ? `Record submitted for approval. Record ID: ${
+                  out.recordId || "N/A"
+                }.`
+              : `Record submitted successfully! Record ID: ${
+                  out.recordId || "N/A"
+                }.`;
+          } else {
+            document.getElementById("crMsg").textContent =
+              out.message || "Submission failed.";
+          }
+        } catch (error) {
+          document.getElementById("crMsg").textContent =
+            "Network error. Please try again.";
+          console.error(error);
         }
       }
+
       loadDropdowns();
     </script>
   </body>
