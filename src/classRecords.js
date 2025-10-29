@@ -27,6 +27,8 @@ router.post("/", async (req, res) => {
       endTime,
       comment,
     } = req.body;
+
+    // --- Required fields ---
     if (
       !tutorId ||
       !studentId ||
@@ -39,6 +41,7 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
+    // --- Validate tutor and student existence ---
     const tutor = await Tutor.findById(tutorId);
     const student = await Student.findById(studentId);
     if (!tutor || !student)
@@ -50,20 +53,52 @@ router.post("/", async (req, res) => {
         .json({ message: "Selected subject is not in tutor's subjects" });
     }
 
+    // --- Validate time inputs ---
     const start = new Date(startTime);
     const end = new Date(endTime);
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       return res.status(400).json({ message: "Invalid start or end time" });
     }
-    if (end <= start)
+
+    if (end <= start) {
       return res
         .status(400)
         .json({ message: "End time must be after start time" });
+    }
 
-    // Same-day submission rule: submission date must equal lesson date
+    // --- Ensure valid duration (30m, 1h, 1h30m, 2h) ---
+    const durationMinutes = (end - start) / (1000 * 60);
+    const allowedDurations = [30, 60, 90, 120];
+    const withinTolerance = allowedDurations.some(
+      (allowed) => Math.abs(durationMinutes - allowed) <= 1
+    );
+
+    if (!withinTolerance) {
+      return res.status(400).json({
+        message:
+          "Class duration must be 30 minutes, 1 hour, 1 hour 30 minutes, or 2 hours.",
+      });
+    }
+
+    // --- Prevent duplicate/overlapping records ---
+    const overlapping = await ClassRecord.findOne({
+      tutorId,
+      studentId,
+      subject,
+      $or: [{ startTime: { $lt: end }, endTime: { $gt: start } }],
+    });
+
+    if (overlapping) {
+      return res.status(400).json({
+        message: "Duplicate or overlapping class record already exists.",
+      });
+    }
+
+    // --- Same-day submission rule ---
     const now = new Date();
     const lessonDate = dayjs(start).tz("Africa/Lagos").format("YYYY-MM-DD");
     const submitDate = dayjs(now).tz("Africa/Lagos").format("YYYY-MM-DD");
+
     if (lessonDate !== submitDate) {
       return res.status(400).json({
         message:
@@ -71,7 +106,10 @@ router.post("/", async (req, res) => {
       });
     }
 
+  
     const paymentAmount = calculatePaymentAmount(classLevel, start, end);
+
+    // --- Save valid record ---
     const record = await ClassRecord.create({
       tutorId,
       studentId,
@@ -85,8 +123,13 @@ router.post("/", async (req, res) => {
       status: "Valid",
       comment,
     });
-    res.status(201).json(record);
+
+    res.status(201).json({
+      message: "Class record created successfully",
+      recordId: record._id,
+    });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -122,17 +165,82 @@ router.post("/late-submission", async (req, res) => {
       reason,
     } = req.body;
 
-    if (!reason) {
-      return res.status(400).json({ message: "Reason for late submission required" });
+    // --- Check for required fields ---
+    if (
+      !tutorId ||
+      !studentId ||
+      !classLevel ||
+      !subject ||
+      !topic ||
+      !startTime ||
+      !endTime
+    ) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
+    if (!reason) {
+      return res
+        .status(400)
+        .json({ message: "Reason for late submission required" });
+    }
+
+    // --- Validate tutor & student existence ---
+    const tutor = await Tutor.findById(tutorId);
+    const student = await Student.findById(studentId);
+    if (!tutor || !student)
+      return res.status(404).json({ message: "Tutor or Student not found" });
+
+    if (!tutor.subjects.includes(subject)) {
+      return res
+        .status(400)
+        .json({ message: "Selected subject is not in tutor's subjects" });
+    }
+
+    // --- Validate time inputs ---
     const start = new Date(startTime);
     const end = new Date(endTime);
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       return res.status(400).json({ message: "Invalid start or end time" });
     }
 
+    if (end <= start) {
+      return res
+        .status(400)
+        .json({ message: "End time must be after start time" });
+    }
+
+    // --- Ensure valid duration (30m, 1h, 1h30m, 2h) ---
+    const durationMinutes = (end - start) / (1000 * 60);
+    const allowedDurations = [30, 60, 90, 120];
+    const withinTolerance = allowedDurations.some(
+      (allowed) => Math.abs(durationMinutes - allowed) <= 1
+    );
+
+    if (!withinTolerance) {
+      return res.status(400).json({
+        message:
+          "Class duration must be 30 minutes, 1 hour, 1 hour 30 minutes, or 2 hours.",
+      });
+    }
+
+    // --- Prevent duplicate/overlapping records ---
+    const overlapping = await ClassRecord.findOne({
+      tutorId,
+      studentId,
+      subject,
+      $or: [{ startTime: { $lt: end }, endTime: { $gt: start } }],
+    });
+
+    if (overlapping) {
+      return res.status(400).json({
+        message: "Duplicate or overlapping class record already exists.",
+      });
+    }
+
+    // --- Compute payment ---
     const paymentAmount = calculatePaymentAmount(classLevel, start, end);
+
+    // --- Save record with Pending Approval status ---
     const record = await ClassRecord.create({
       tutorId,
       studentId,
@@ -151,10 +259,16 @@ router.post("/late-submission", async (req, res) => {
       comment,
     });
 
-    res.status(201).json(record);
+    res.status(201).json({
+      message:
+        "Late class record submitted successfully. Awaiting admin approval.",
+      recordId: record._id,
+    });
   } catch (err) {
-    console.error(err); // Log the error for debugging
-    res.status(500).json({ message: "An error occurred while processing your request." });
+    console.error(err);
+    res
+      .status(500)
+      .json({ message: "An error occurred while processing your request." });
   }
 });
 
