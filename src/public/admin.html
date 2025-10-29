@@ -82,7 +82,13 @@
           <table id="recordsTable">
             <thead>
               <tr>
-                <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th> 
+                <th>
+                  <input
+                    type="checkbox"
+                    id="selectAll"
+                    onclick="toggleSelectAll()"
+                  />
+                </th>
                 <th>Date</th>
                 <th>Tutor</th>
                 <th>Student</th>
@@ -100,6 +106,71 @@
           </table>
         </div>
       </section>
+    </div>
+
+    <div id="editModal" class="modal" aria-hidden="true">
+      <div
+        class="modal-content"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="editModalTitle"
+      >
+        <h3 id="editModalTitle">Edit Class Record</h3>
+        <form id="editForm" onsubmit="return false;">
+          <input type="hidden" id="editRecordId" />
+          <div class="row">
+            <label style="flex: 1"
+              >Tutor
+              <select id="editTutor"></select>
+            </label>
+            <label style="flex: 1"
+              >Student
+              <select id="editStudent"></select>
+            </label>
+          </div>
+
+          <div class="row">
+            <label style="flex: 1"
+              >Class
+              <select id="editClass"></select>
+            </label>
+            <label style="flex: 1"
+              >Subject
+              <select id="editSubject"></select>
+            </label>
+          </div>
+
+          <label
+            >Topic
+            <input id="editTopic" />
+          </label>
+
+          <div class="row">
+            <label style="flex: 1"
+              >Start
+              <input type="datetime-local" id="editStart" />
+            </label>
+            <label style="flex: 1"
+              >End
+              <input type="datetime-local" id="editEnd" />
+            </label>
+          </div>
+
+          <label
+            >Comment
+            <input id="editComment" />
+          </label>
+
+          <div style="display: flex; gap: 8px; margin-top: 12px">
+            <button type="button" onclick="saveEdit()">Save</button>
+            <button type="button" onclick="closeEditModal()" class="muted">
+              Cancel
+            </button>
+          </div>
+
+          <div id="editMsg" class="muted"></div>
+        </form>
+      </div>
     </div>
 
     <script>
@@ -361,12 +432,184 @@
           document.getElementById("adminMsg").textContent = "Network error";
         }
       }
-
-      async function editRecord(id) {
-        // You can implement this to open a modal or redirect to an edit page
-        window.location.href = `/edit-record.html?id=${id}`;
+      function showEditModal() {
+        const m = document.getElementById("editModal");
+        m.style.display = "flex";
+        m.setAttribute("aria-hidden", "false");
       }
 
+      function closeEditModal() {
+        const m = document.getElementById("editModal");
+        m.style.display = "none";
+        m.setAttribute("aria-hidden", "true");
+        document.getElementById("editMsg").textContent = "";
+      }
+
+      async function openEditModal(recordId) {
+        document.getElementById("editMsg").textContent = "";
+        document.getElementById("editRecordId").value = recordId;
+
+        // load tutors & students (for selects)
+        const [tutorsResp, studentsResp] = await Promise.all([
+          fetch(api("/tutors")),
+          fetch(api("/students")),
+        ]);
+        const tutors = tutorsResp.ok ? await tutorsResp.json() : [];
+        const students = studentsResp.ok ? await studentsResp.json() : [];
+
+        const editTutor = document.getElementById("editTutor");
+        editTutor.innerHTML =
+          '<option value="">Select Tutor</option>' +
+          tutors
+            .map((t) => `<option value="${t._id}">${t.name}</option>`)
+            .join("");
+
+        const editStudent = document.getElementById("editStudent");
+        editStudent.innerHTML =
+          '<option value="">Select Student</option>' +
+          students
+            .map((s) => `<option value="${s._id}">${s.name}</option>`)
+            .join("");
+
+        // class options
+        const classSel = document.getElementById("editClass");
+        classSel.innerHTML = [
+          "Nursery",
+          ...Array.from({ length: 12 }, (_, i) => `Year ${i + 1}`),
+        ]
+          .map((c) => `<option>${c}</option>`)
+          .join("");
+
+        // fetch the record
+        const resp = await fetch(api(`/class-records/${recordId}`));
+        if (!resp.ok) {
+          document.getElementById("adminMsg").textContent =
+            "Failed to load record";
+          return;
+        }
+        const r = await resp.json();
+
+        // populate form
+        editTutor.value = r.tutorId?._id || "";
+        editStudent.value = r.studentId?._id || "";
+        document.getElementById("editClass").value = r.classLevel || "";
+
+        // populate subject options for selected tutor
+        const tutorObj = tutors.find((t) => t._id === (r.tutorId?._id || ""));
+        const editSubject = document.getElementById("editSubject");
+        editSubject.innerHTML = tutorObj
+          ? tutorObj.subjects.map((s) => `<option>${s}</option>`).join("")
+          : "<option></option>";
+        document.getElementById("editSubject").value = r.subject || "";
+
+        document.getElementById("editTopic").value = r.topic || "";
+        document.getElementById("editStart").value = toDatetimeLocalValue(
+          r.startTime
+        );
+        document.getElementById("editEnd").value = toDatetimeLocalValue(
+          r.endTime
+        );
+        document.getElementById("editComment").value = r.comment || "";
+
+        // update subject options when tutor changes (replace handler to avoid duplicates)
+        editTutor.onchange = () => {
+          const t = tutors.find((x) => x._id === editTutor.value);
+          editSubject.innerHTML = t
+            ? t.subjects.map((s) => `<option>${s}</option>`).join("")
+            : "";
+        };
+
+        showEditModal();
+      }
+
+      async function editRecord(id) {
+        // open modal instead of redirect
+        openEditModal(id);
+      }
+
+      async function saveEdit() {
+        const id = document.getElementById("editRecordId").value;
+        const tutorId = document.getElementById("editTutor").value;
+        const studentId = document.getElementById("editStudent").value;
+        const classLevel = document.getElementById("editClass").value;
+        const subject = document.getElementById("editSubject").value;
+        const topic = document.getElementById("editTopic").value;
+        const startTime = document.getElementById("editStart").value;
+        const endTime = document.getElementById("editEnd").value;
+        const comment = document.getElementById("editComment").value;
+
+        if (
+          !tutorId ||
+          !studentId ||
+          !classLevel ||
+          !subject ||
+          !topic ||
+          !startTime ||
+          !endTime
+        ) {
+          document.getElementById("editMsg").textContent =
+            "All fields are required";
+          return;
+        }
+
+        const s = new Date(startTime);
+        const e = new Date(endTime);
+        if (isNaN(s.getTime()) || isNaN(e.getTime()) || e <= s) {
+          document.getElementById("editMsg").textContent =
+            "Invalid start/end times";
+          return;
+        }
+
+        const minutes = (e.getTime() - s.getTime()) / 60000;
+        const allowed = [30, 60, 90, 120];
+        if (!allowed.includes(minutes)) {
+          document.getElementById("editMsg").textContent =
+            "Allowed durations: 30m, 1h, 1.5h, 2h";
+          return;
+        }
+
+        const rate = getRateLocal(classLevel);
+        const paymentAmount = Math.round(rate * (minutes / 60));
+
+        try {
+          const res = await fetch(api(`/class-records/${id}`), {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              "x-admin-password": getPass(),
+            },
+            body: JSON.stringify({
+              tutorId,
+              studentId,
+              classLevel,
+              subject,
+              topic,
+              startTime,
+              endTime,
+              comment,
+              paymentAmount,
+            }),
+          });
+
+          if (!res.ok) {
+            const out = await res.json().catch(() => ({}));
+            document.getElementById("editMsg").textContent =
+              out.message || "Update failed";
+            return;
+          }
+
+          closeEditModal();
+          document.getElementById("adminMsg").textContent = "Record updated";
+          loadRecords();
+        } catch (err) {
+          console.error(err);
+          document.getElementById("editMsg").textContent = "Network error";
+        }
+      }
+
+      document.getElementById("editModal").addEventListener("click", (e) => {
+        if (e.target.id === "editModal") closeEditModal();
+      });
       async function loadPendingRecords() {
         const resp = await fetch(api("/class-records/pending"), {
           headers: { "x-admin-password": getPass() },
