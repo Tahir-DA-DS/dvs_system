@@ -312,6 +312,22 @@ router.delete("/bulk-delete", async (req, res) => {
   }
 });
 
+router.get("/:id", async (req, res) => {
+  try {
+    const record = await ClassRecord.findById(req.params.id)
+      .populate("tutorId")
+      .populate("studentId");
+    
+    if (!record) {
+      return res.status(404).json({ message: "Record not found" });
+    }
+    
+    res.json(record);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.delete("/:id", async (req, res) => {
   try {
     const record = await ClassRecord.findById(req.params.id);
