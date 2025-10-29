@@ -295,20 +295,6 @@ router.patch("/:recordId/approve", async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
-  try {
-    const record = await ClassRecord.findById(req.params.id);
-    if (!record) {
-      return res.status(404).json({ message: "Record not found" });
-    }
-    
-    await record.deleteOne();
-    res.json({ message: "Record deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
 // Bulk delete records
 router.delete("/bulk-delete", async (req, res) => {
   try {
@@ -321,6 +307,20 @@ router.delete("/bulk-delete", async (req, res) => {
     res.json({ 
       message: `${result.deletedCount} records deleted successfully` 
     });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    const record = await ClassRecord.findById(req.params.id);
+    if (!record) {
+      return res.status(404).json({ message: "Record not found" });
+    }
+    
+    await record.deleteOne();
+    res.json({ message: "Record deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
