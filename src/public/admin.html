@@ -185,6 +185,18 @@
           <div id="editMsg" class="muted"></div>
         </form>
       </div>
+      <div class="row">
+        <label style="flex: 1"
+          >Start
+          <input type="datetime-local" id="editStart" />
+        </label>
+        <label style="flex: 1"
+          >End
+          <input type="datetime-local" id="editEnd" />
+        </label>
+      </div>
+
+      <div class="amount-display">Amount: <span id="editAmount">₦0</span></div>
     </div>
 
     <script>
@@ -219,6 +231,19 @@
       //   a.href = url.toString();
       //   a.click();
       // }
+      function calculateAmount(classLevel, startTime, endTime) {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+          return 0;
+        }
+
+        const rate = getRateLocal(classLevel);
+        const minutes = (end.getTime() - start.getTime()) / 60000;
+        const hours = minutes / 60;
+        return Math.round(rate * hours);
+      }
       async function downloadCSV() {
         const tutorId = document.getElementById("adTutor").value;
         const from = document.getElementById("adFrom").value;
@@ -637,7 +662,8 @@
         }
 
         const rate = getRateLocal(classLevel);
-        const paymentAmount = Math.round(rate * (minutes / 60));
+        // const paymentAmount = Math.round(rate * (minutes / 60));
+         const paymentAmount = calculateAmount(classLevel, startTime, endTime);
 
         try {
           const res = await fetch(api(`/class-records/${id}`), {
@@ -703,7 +729,25 @@
             )
             .join("") || "<p>No pending approvals</p>";
       }
+      function updateAmount() {
+        const startTime = document.getElementById("editStart").value;
+        const endTime = document.getElementById("editEnd").value;
+        const classLevel = document.getElementById("editClass").value;
 
+        const amount = calculateAmount(classLevel, startTime, endTime);
+        document.getElementById(
+          "editAmount"
+        ).textContent = `₦${amount.toLocaleString()}`;
+      }
+      document
+        .getElementById("editStart")
+        .addEventListener("change", updateAmount);
+      document
+        .getElementById("editEnd")
+        .addEventListener("change", updateAmount);
+      document
+        .getElementById("editClass")
+        .addEventListener("change", updateAmount);
       async function handleApproval(recordId, approved) {
         const resp = await fetch(api(`/class-records/${recordId}/approve`), {
           method: "PATCH",

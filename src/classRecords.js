@@ -272,6 +272,37 @@ router.post("/late-submission", async (req, res) => {
   }
 });
 
+// Get pending records
+router.get("/pending", async (req, res) => {
+  try {
+    const records = await ClassRecord.find({ status: "Pending Approval" })
+      .populate("tutorId")
+      .populate("studentId")
+      .sort({ dateSubmitted: -1 });
+    
+    res.json(records);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Bulk delete records
+router.delete("/bulk-delete", async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || !ids.length) {
+      return res.status(400).json({ message: "No records specified for deletion" });
+    }
+
+    const result = await ClassRecord.deleteMany({ _id: { $in: ids } });
+    res.json({ 
+      message: `${result.deletedCount} records deleted successfully` 
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.patch("/:recordId/approve", async (req, res) => {
   try {
     const { adminId, approved } = req.body;
@@ -290,23 +321,6 @@ router.patch("/:recordId/approve", async (req, res) => {
     await record.save();
 
     res.json(record);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// Bulk delete records
-router.delete("/bulk-delete", async (req, res) => {
-  try {
-    const { ids } = req.body;
-    if (!Array.isArray(ids) || !ids.length) {
-      return res.status(400).json({ message: "No records specified for deletion" });
-    }
-
-    const result = await ClassRecord.deleteMany({ _id: { $in: ids } });
-    res.json({ 
-      message: `${result.deletedCount} records deleted successfully` 
-    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -342,19 +356,7 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// Get pending records
-router.get("/pending", async (req, res) => {
-  try {
-    const records = await ClassRecord.find({ status: "Pending Approval" })
-      .populate("tutorId")
-      .populate("studentId")
-      .sort({ dateSubmitted: -1 });
-    
-    res.json(records);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+
 
 // Approve/reject pending record
 router.patch("/:id/approve", async (req, res) => {
