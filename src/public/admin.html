@@ -169,7 +169,18 @@
               <input type="datetime-local" id="editEnd" />
             </label>
           </div>
+  <div class="row">
+        <label style="flex: 1"
+          >Start
+          <input type="datetime-local" id="editStart" />
+        </label>
+        <label style="flex: 1"
+          >End
+          <input type="datetime-local" id="editEnd" />
+        </label>
+      </div>
 
+      <div class="amount-display">Amount: <span id="editAmount">₦0</span></div>
           <label
             >Comment
             <input id="editComment" />
@@ -185,18 +196,7 @@
           <div id="editMsg" class="muted"></div>
         </form>
       </div>
-      <div class="row">
-        <label style="flex: 1"
-          >Start
-          <input type="datetime-local" id="editStart" />
-        </label>
-        <label style="flex: 1"
-          >End
-          <input type="datetime-local" id="editEnd" />
-        </label>
-      </div>
 
-      <div class="amount-display">Amount: <span id="editAmount">₦0</span></div>
     </div>
 
     <script>
