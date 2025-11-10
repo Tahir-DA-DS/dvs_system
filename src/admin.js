@@ -31,6 +31,97 @@ function buildDateFilter(from, to) {
   return filter;
 }
 
+router.get("/export-raw", requireAdmin, async (req, res) => {
+  try {
+    const { tutorId, from, to } = req.query;
+    const filter = {};
+    if (tutorId) filter.tutorId = tutorId;
+    if (from || to) {
+      filter.startTime = {};
+      if (from) filter.startTime.$gte = new Date(from);
+      if (to) {
+        const d = new Date(to);
+        d.setHours(23, 59, 59, 999);
+        filter.startTime.$lte = d;
+      }
+    }
+
+    const records = await ClassRecord.find(filter)
+      .populate("tutorId")
+      .populate("studentId")
+      .sort({ startTime: 1 });
+
+    const csv = generateRawCSV(records);
+    
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="records-raw-${from || "all"}-${to || "all"}.csv"`
+    );
+    res.send(csv);
+  } catch (err) {
+    console.error("Export raw CSV error:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Aggregated export (summary)
+router.get("/export-aggregated", requireAdmin, async (req, res) => {
+  try {
+    const { tutorId, from, to } = req.query;
+    const filter = {};
+    if (tutorId) filter.tutorId = tutorId;
+    if (from || to) {
+      filter.startTime = {};
+      if (from) filter.startTime.$gte = new Date(from);
+      if (to) {
+        const d = new Date(to);
+        d.setHours(23, 59, 59, 999);
+        filter.startTime.$lte = d;
+      }
+    }
+
+    const aggregated = await ClassRecord.aggregate([
+      { $match: filter },
+      { $lookup: { from: 'tutors', localField: 'tutorId', foreignField: '_id', as: 'tutor' }},
+      { $unwind: '$tutor' },
+      {
+        $group: {
+          _id: {
+            tutorId: '$tutorId',
+            tutorName: '$tutor.name',
+            month: { $month: '$startTime' },
+            year: { $year: '$startTime' }
+          },
+          totalHours: {
+            $sum: {
+              $divide: [
+                { $subtract: ['$endTime', '$startTime'] },
+                3600000 // convert ms to hours
+              ]
+            }
+          },
+          totalAmount: { $sum: '$paymentAmount' },
+          classCount: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1, '_id.tutorName': 1 } }
+    ]);
+
+    const csv = generateAggregatedCSV(aggregated);
+    
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="records-summary-${from || "all"}-${to || "all"}.csv"`
+    );
+    res.send(csv);
+  } catch (err) {
+    console.error("Export aggregated CSV error:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Export records CSV filtered by tutor and date range
 router.get('/export', requireAdmin, async (req, res) => {
   try {
@@ -155,6 +246,60 @@ router.get('/tutors', requireAdmin, async (_req, res) => {
   res.json(tutors);
 });
 
+// Helper functions for CSV generation
+function generateRawCSV(records) {
+  const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const header = [
+    "Date",
+    "Tutor",
+    "Student",
+    "Class",
+    "Subject",
+    "Topic",
+    "Start Time",
+    "End Time",
+    "Amount (₦)",
+    "Status"
+  ].join(",");
+
+  const rows = records.map(r => [
+    new Date(r.startTime).toLocaleDateString(),
+    r.tutorId?.name || "",
+    r.studentId?.name || "",
+    r.classLevel || "",
+    r.subject || "",
+    r.topic || "",
+    new Date(r.startTime).toLocaleString(),
+    new Date(r.endTime).toLocaleString(),
+    r.paymentAmount || 0,
+    r.status || ""
+  ].map(escape).join(","));
+
+  return [header, ...rows].join("\n");
+}
+
+function generateAggregatedCSV(aggregated) {
+  const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const header = [
+    "Year",
+    "Month",
+    "Tutor",
+    "Total Classes",
+    "Total Hours",
+    "Total Amount (₦)"
+  ].join(",");
+
+  const rows = aggregated.map(r => [
+    r._id.year,
+    r._id.month,
+    r._id.tutorName,
+    r.classCount,
+    r.totalHours.toFixed(2),
+    r.totalAmount.toLocaleString()
+  ].map(escape).join(","));
+
+  return [header, ...rows].join("\n");
+}
 export default router;
 
 

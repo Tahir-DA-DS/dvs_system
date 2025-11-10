@@ -75,7 +75,7 @@
         </div> -->
         <div class="row" style="margin-bottom: 10px">
           <button onclick="loadRecords()">Refresh</button>
-          <button onclick="downloadCSV()">Download Displayed CSV</button>
+          <button onclick="downloadRawCSV()">Download Displayed CSV</button>
           <button onclick="bulkDelete()" class="danger">Delete Selected</button>
         </div>
         <div style="overflow: auto; margin-top: 10px">
@@ -169,18 +169,20 @@
               <input type="datetime-local" id="editEnd" />
             </label>
           </div>
-  <div class="row">
-        <label style="flex: 1"
-          >Start
-          <input type="datetime-local" id="editStart" />
-        </label>
-        <label style="flex: 1"
-          >End
-          <input type="datetime-local" id="editEnd" />
-        </label>
-      </div>
+          <div class="row">
+            <label style="flex: 1"
+              >Start
+              <input type="datetime-local" id="editStart" />
+            </label>
+            <label style="flex: 1"
+              >End
+              <input type="datetime-local" id="editEnd" />
+            </label>
+          </div>
 
-      <div class="amount-display">Amount: <span id="editAmount">₦0</span></div>
+          <div class="amount-display">
+            Amount: <span id="editAmount">₦0</span>
+          </div>
           <label
             >Comment
             <input id="editComment" />
@@ -196,7 +198,6 @@
           <div id="editMsg" class="muted"></div>
         </form>
       </div>
-
     </div>
 
     <script>
@@ -272,19 +273,31 @@
         a.remove();
         URL.revokeObjectURL(a.href);
       }
-      // async function downloadStudentSummaryCSV() {
-      //   const tutorId = document.getElementById('adTutor').value;
-      //   const from = document.getElementById('adFrom').value;
-      //   const to = document.getElementById('adTo').value;
-      //   const url = new URL(api('/admin/export-student-summary'));
-      //   url.searchParams.set('adminPassword', getPass());
-      //   if (tutorId) url.searchParams.set('tutorId', tutorId);
-      //   if (from) url.searchParams.set('from', from);
-      //   if (to) url.searchParams.set('to', to);
-      //   const a = document.createElement('a');
-      //   a.href = url.toString();
-      //   a.click();
-      // }
+      async function downloadRawCSV() {
+        const tutorId = document.getElementById("adTutor").value;
+        const from = document.getElementById("adFrom").value;
+        const to = document.getElementById("adTo").value;
+        const params = new URLSearchParams();
+        if (tutorId) params.set("tutorId", tutorId);
+        if (from) params.set("from", from);
+        if (to) params.set("to", to);
+
+        window.location.href = api(`/admin/export-raw?${params.toString()}`);
+      }
+
+      async function downloadAggregatedCSV() {
+        const tutorId = document.getElementById("adTutor").value;
+        const from = document.getElementById("adFrom").value;
+        const to = document.getElementById("adTo").value;
+        const params = new URLSearchParams();
+        if (tutorId) params.set("tutorId", tutorId);
+        if (from) params.set("from", from);
+        if (to) params.set("to", to);
+
+        window.location.href = api(
+          `/admin/export-aggregated?${params.toString()}`
+        );
+      }
       async function downloadStudentSummaryCSV() {
         const tutorId = document.getElementById("adTutor").value;
         const from = document.getElementById("adFrom").value;
@@ -663,7 +676,7 @@
 
         const rate = getRateLocal(classLevel);
         // const paymentAmount = Math.round(rate * (minutes / 60));
-         const paymentAmount = calculateAmount(classLevel, startTime, endTime);
+        const paymentAmount = calculateAmount(classLevel, startTime, endTime);
 
         try {
           const res = await fetch(api(`/class-records/${id}`), {
