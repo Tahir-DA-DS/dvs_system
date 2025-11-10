@@ -274,29 +274,77 @@
         URL.revokeObjectURL(a.href);
       }
       async function downloadRawCSV() {
-        const tutorId = document.getElementById("adTutor").value;
-        const from = document.getElementById("adFrom").value;
-        const to = document.getElementById("adTo").value;
+        const tutorId = document.getElementById("adTutor")?.value;
+        const from = document.getElementById("adFrom")?.value;
+        const to = document.getElementById("adTo")?.value;
         const params = new URLSearchParams();
         if (tutorId) params.set("tutorId", tutorId);
         if (from) params.set("from", from);
         if (to) params.set("to", to);
 
-        window.location.href = api(`/admin/export-raw?${params.toString()}`);
+        const url = api(`/admin/export-raw?${params.toString()}`);
+        try {
+          const res = await fetch(url, {
+            headers: { "x-admin-password": getPass() },
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            document.getElementById("adminMsg").textContent =
+              body.message || `Error ${res.status}`;
+            return;
+          }
+          const blob = await res.blob();
+          const cd = res.headers.get("Content-Disposition") || "";
+          const match = cd.match(/filename="?([^"]+)"?/);
+          const filename = match ? match[1] : "records-raw.csv";
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(link.href);
+        } catch (err) {
+          console.error(err);
+          document.getElementById("adminMsg").textContent = "Network error";
+        }
       }
 
       async function downloadAggregatedCSV() {
-        const tutorId = document.getElementById("adTutor").value;
-        const from = document.getElementById("adFrom").value;
-        const to = document.getElementById("adTo").value;
+        const tutorId = document.getElementById("adTutor")?.value;
+        const from = document.getElementById("adFrom")?.value;
+        const to = document.getElementById("adTo")?.value;
         const params = new URLSearchParams();
         if (tutorId) params.set("tutorId", tutorId);
         if (from) params.set("from", from);
         if (to) params.set("to", to);
 
-        window.location.href = api(
-          `/admin/export-aggregated?${params.toString()}`
-        );
+        const url = api(`/admin/export-aggregated?${params.toString()}`);
+        try {
+          const res = await fetch(url, {
+            headers: { "x-admin-password": getPass() },
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            document.getElementById("adminMsg").textContent =
+              body.message || `Error ${res.status}`;
+            return;
+          }
+          const blob = await res.blob();
+          const cd = res.headers.get("Content-Disposition") || "";
+          const match = cd.match(/filename="?([^"]+)"?/);
+          const filename = match ? match[1] : "records-summary.csv";
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(link.href);
+        } catch (err) {
+          console.error(err);
+          document.getElementById("adminMsg").textContent = "Network error";
+        }
       }
       async function downloadStudentSummaryCSV() {
         const tutorId = document.getElementById("adTutor").value;
