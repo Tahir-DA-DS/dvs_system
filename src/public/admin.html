@@ -100,10 +100,10 @@
                 <option value="">All Students</option>
               </select>
             </label>
+            <button onclick="loadRecords()">Refresh</button>
+            <button onclick="downloadRawCSV()">Download Displayed CSV</button>
+            <button onclick="bulkDelete()" class="danger">Delete Selected</button>
           </div>
-          <button onclick="loadRecords()">Refresh</button>
-          <button onclick="downloadRawCSV()">Download Displayed CSV</button>
-          <button onclick="bulkDelete()" class="danger">Delete Selected</button>
         </div>
         <div style="overflow: auto; margin-top: 10px">
           <table id="recordsTable">
