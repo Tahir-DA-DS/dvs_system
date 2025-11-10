@@ -74,6 +74,33 @@
           <button onclick="downloadCSV()">Download Displayed CSV</button>
         </div> -->
         <div class="row" style="margin-bottom: 10px">
+          <div
+            style="
+              display: flex;
+              gap: 8px;
+              margin-bottom: 10px;
+              flex-wrap: wrap;
+            "
+          >
+            <label style="flex: 1; min-width: 200px">
+              Filter Tutor
+              <select id="filterTutor" onchange="loadRecords()">
+                <option value="">All Tutors</option>
+              </select>
+            </label>
+            <label style="flex: 1; min-width: 200px">
+              Filter Class
+              <select id="filterClass" onchange="loadRecords()">
+                <option value="">All Classes</option>
+              </select>
+            </label>
+            <label style="flex: 1; min-width: 200px">
+              Filter Student
+              <select id="filterStudent" onchange="loadRecords()">
+                <option value="">All Students</option>
+              </select>
+            </label>
+          </div>
           <button onclick="loadRecords()">Refresh</button>
           <button onclick="downloadRawCSV()">Download Displayed CSV</button>
           <button onclick="bulkDelete()" class="danger">Delete Selected</button>
@@ -204,6 +231,20 @@
       const api = (path) => `${location.origin}/api${path}`;
       const getPass = () => localStorage.getItem("adminPass") || "";
       async function loadTutors() {
+        const tutorId = document.getElementById("filterTutor").value;
+        const classLevel = document.getElementById("filterClass").value;
+        const studentId = document.getElementById("filterStudent").value;
+        const from = document.getElementById("adFrom").value;
+        const to = document.getElementById("adTo").value;
+
+        const params = new URLSearchParams();
+        if (tutorId) params.set("tutorId", tutorId);
+        if (classLevel) params.set("classLevel", classLevel);
+        if (studentId) params.set("studentId", studentId);
+        if (from) params.set("from", from);
+        if (to) params.set("to", to);
+
+        const resp = await fetch(api(`/class-records?${params.toString()}`));
         const tutorsResp = await fetch(api("/admin/tutors"), {
           headers: { "x-admin-password": getPass() },
         });
@@ -218,6 +259,47 @@
           tutors
             .map((t) => `<option value="${t._id}">${t.name}</option>`)
             .join("");
+      }
+
+      async function loadFilterOptions() {
+        try {
+          // Load tutors for filter
+          const tutorsResp = await fetch(api("/tutors"));
+          if (tutorsResp.ok) {
+            const tutors = await tutorsResp.json();
+            const filterTutor = document.getElementById("filterTutor");
+            filterTutor.innerHTML =
+              '<option value="">All Tutors</option>' +
+              tutors
+                .map((t) => `<option value="${t._id}">${t.name}</option>`)
+                .join("");
+          }
+
+          // Load students for filter
+          const studentsResp = await fetch(api("/students"));
+          if (studentsResp.ok) {
+            const students = await studentsResp.json();
+            const filterStudent = document.getElementById("filterStudent");
+            filterStudent.innerHTML =
+              '<option value="">All Students</option>' +
+              students
+                .map((s) => `<option value="${s._id}">${s.name}</option>`)
+                .join("");
+          }
+
+          // Populate class levels
+          const filterClass = document.getElementById("filterClass");
+          filterClass.innerHTML =
+            '<option value="">All Classes</option>' +
+            [
+              "Nursery",
+              ...Array.from({ length: 12 }, (_, i) => `Year ${i + 1}`),
+            ]
+              .map((c) => `<option value="${c}">${c}</option>`)
+              .join("");
+        } catch (err) {
+          console.error("Failed to load filter options:", err);
+        }
       }
       // async function downloadCSV() {
       //   const tutorId = document.getElementById('adTutor').value;
@@ -829,7 +911,7 @@
           } successfully`;
         }
       }
-
+      loadFilterOptions();
       loadTutors();
       loadRecords();
       loadPendingRecords();

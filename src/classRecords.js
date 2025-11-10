@@ -272,6 +272,36 @@ router.post("/late-submission", async (req, res) => {
   }
 });
 
+router.get("/", async (req, res) => {
+  try {
+    const { tutorId, studentId, classLevel, from, to } = req.query;
+    const filter = {};
+    
+    if (tutorId) filter.tutorId = tutorId;
+    if (studentId) filter.studentId = studentId;
+    if (classLevel) filter.classLevel = classLevel;
+    if (from || to) {
+      filter.startTime = {};
+      if (from) filter.startTime.$gte = new Date(from);
+      if (to) {
+        const endDate = new Date(to);
+        endDate.setHours(23, 59, 59, 999);
+        filter.startTime.$lte = endDate;
+      }
+    }
+
+    const records = await ClassRecord.find(filter)
+      .populate("tutorId")
+      .populate("studentId")
+      .sort({ startTime: -1 });
+
+    res.json(records);
+  } catch (err) {
+    console.error("GET /class-records error:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Get pending records
 router.get("/pending", async (req, res) => {
   try {
