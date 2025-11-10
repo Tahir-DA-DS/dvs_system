@@ -106,8 +106,8 @@ router.post("/", async (req, res) => {
       });
     }
 
-  
-    const paymentAmount = calculatePaymentAmount(classLevel, start, end);
+     const paymentAmount = calcPaymentAmount(classLevel, subject, start, end);
+ 
 
     // --- Save valid record ---
     const record = await ClassRecord.create({

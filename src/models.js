@@ -79,7 +79,7 @@ export function calculatePaymentAmount(classLevel, subject, startTime, endTime) 
     return 0;
   }
 
-  const rate = getRateLocal(classLevel, subject);
+  const rate = getHourlyRateForClassLevel(classLevel, subject);
   const minutes = (end.getTime() - start.getTime()) / 60000;
   const hours = minutes / 60;
   return Math.round(rate * hours);
