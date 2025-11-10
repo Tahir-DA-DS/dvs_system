@@ -280,6 +280,7 @@ router.get("/", async (req, res) => {
     if (tutorId) filter.tutorId = tutorId;
     if (studentId) filter.studentId = studentId;
     if (classLevel) filter.classLevel = classLevel;
+    
     if (from || to) {
       filter.startTime = {};
       if (from) filter.startTime.$gte = new Date(from);
@@ -290,11 +291,14 @@ router.get("/", async (req, res) => {
       }
     }
 
+    console.log('Applying filters:', filter);
+
     const records = await ClassRecord.find(filter)
       .populate("tutorId")
       .populate("studentId")
       .sort({ startTime: -1 });
 
+    console.log('Found records:', records.length);
     res.json(records);
   } catch (err) {
     console.error("GET /class-records error:", err);

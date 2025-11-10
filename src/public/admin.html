@@ -473,76 +473,142 @@
           ? "Late approved"
           : out.message;
       }
+      //   async function loadRecords() {
+      //     const tutorId = document.getElementById("adTutor").value;
+      //     const from = document.getElementById("adFrom").value;
+      //     const to = document.getElementById("adTo").value;
+      //     const params = new URLSearchParams();
+      //     if (tutorId) params.set("tutorId", tutorId);
+      //     if (from) params.set("from", from);
+      //     if (to) params.set("to", to);
+      //     const resp = await fetch(api(`/class-records?${params.toString()}`));
+      //     if (!resp.ok) return;
+      //     const rows = await resp.json();
+      //     const tbody = document.querySelector("#recordsTable tbody");
+
+      //     // small helper to truncate display but keep full value on hover
+      //     const tr = (s, n = 40) =>
+      //       s && s.length > n ? s.slice(0, n - 1) + "…" : s || "";
+
+      //     tbody.innerHTML = rows
+      //       .map((r) => {
+      //         const date = new Date(r.dateSubmitted || r.startTime);
+      //         const dateDisplay = isNaN(date.getTime())
+      //           ? ""
+      //           : date.toLocaleDateString();
+      //         const startDisplay = r.startTime
+      //           ? new Date(r.startTime).toLocaleString()
+      //           : "";
+      //         const endDisplay = r.endTime
+      //           ? new Date(r.endTime).toLocaleString()
+      //           : "";
+      //         return `
+      //   <tr data-id="${r._id}">
+      //     <td class="col-checkbox"><input type="checkbox" class="record-select" value="${
+      //       r._id
+      //     }"></td>
+      //     <td class="col-date" title="${dateDisplay}">${dateDisplay}</td>
+      //     <td class="col-tutor" title="${r.tutorId?.name || ""}">${tr(
+      //           r.tutorId?.name,
+      //           20
+      //         )}</td>
+      //     <td class="col-student" title="${r.studentId?.name || ""}">${tr(
+      //           r.studentId?.name,
+      //           20
+      //         )}</td>
+      //     <td class="col-class" title="${r.classLevel || ""}">${
+      //           r.classLevel || ""
+      //         }</td>
+      //     <td class="col-subject" title="${r.subject || ""}">${tr(
+      //           r.subject,
+      //           24
+      //         )}</td>
+      //     <td class="col-topic" title="${r.topic || ""}">${tr(r.topic, 36)}</td>
+      //     <td class="col-start" title="${startDisplay}">${tr(
+      //           startDisplay,
+      //           20
+      //         )}</td>
+      //     <td class="col-end" title="${endDisplay}">${tr(endDisplay, 20)}</td>
+      //     <td class="col-amount" title="${(
+      //       r.paymentAmount || 0
+      //     ).toLocaleString()}">₦${(r.paymentAmount || 0).toLocaleString()}</td>
+      //     <td class="col-status" title="${r.status || ""}">${r.status || ""}</td>
+      //     <td class="col-actions">
+      //       <button onclick="editRecord('${r._id}')" class="small">Edit</button>
+      //       <button onclick="deleteRecord('${
+      //         r._id
+      //       }')" class="small danger">Delete</button>
+      //     </td>
+      //   </tr>
+      // `;
+      //       })
+      //       .join("");
+      //   }
+
       async function loadRecords() {
-        const tutorId = document.getElementById("adTutor").value;
-        const from = document.getElementById("adFrom").value;
-        const to = document.getElementById("adTo").value;
-        const params = new URLSearchParams();
-        if (tutorId) params.set("tutorId", tutorId);
-        if (from) params.set("from", from);
-        if (to) params.set("to", to);
-        const resp = await fetch(api(`/class-records?${params.toString()}`));
-        if (!resp.ok) return;
-        const rows = await resp.json();
-        const tbody = document.querySelector("#recordsTable tbody");
+        try {
+          const tutorId = document.getElementById("filterTutor")?.value;
+          const classLevel = document.getElementById("filterClass")?.value;
+          const studentId = document.getElementById("filterStudent")?.value;
+          const from = document.getElementById("adFrom")?.value;
+          const to = document.getElementById("adTo")?.value;
 
-        // small helper to truncate display but keep full value on hover
-        const tr = (s, n = 40) =>
-          s && s.length > n ? s.slice(0, n - 1) + "…" : s || "";
+          const params = new URLSearchParams();
+          if (tutorId) params.set("tutorId", tutorId);
+          if (classLevel) params.set("classLevel", classLevel);
+          if (studentId) params.set("studentId", studentId);
+          if (from) params.set("from", from);
+          if (to) params.set("to", to);
 
-        tbody.innerHTML = rows
-          .map((r) => {
-            const date = new Date(r.dateSubmitted || r.startTime);
-            const dateDisplay = isNaN(date.getTime())
-              ? ""
-              : date.toLocaleDateString();
-            const startDisplay = r.startTime
-              ? new Date(r.startTime).toLocaleString()
-              : "";
-            const endDisplay = r.endTime
-              ? new Date(r.endTime).toLocaleString()
-              : "";
-            return `
-      <tr data-id="${r._id}">
-        <td class="col-checkbox"><input type="checkbox" class="record-select" value="${
-          r._id
-        }"></td>
-        <td class="col-date" title="${dateDisplay}">${dateDisplay}</td>
-        <td class="col-tutor" title="${r.tutorId?.name || ""}">${tr(
-              r.tutorId?.name,
-              20
-            )}</td>
-        <td class="col-student" title="${r.studentId?.name || ""}">${tr(
-              r.studentId?.name,
-              20
-            )}</td>
-        <td class="col-class" title="${r.classLevel || ""}">${
-              r.classLevel || ""
-            }</td>
-        <td class="col-subject" title="${r.subject || ""}">${tr(
-              r.subject,
-              24
-            )}</td>
-        <td class="col-topic" title="${r.topic || ""}">${tr(r.topic, 36)}</td>
-        <td class="col-start" title="${startDisplay}">${tr(
-              startDisplay,
-              20
-            )}</td>
-        <td class="col-end" title="${endDisplay}">${tr(endDisplay, 20)}</td>
-        <td class="col-amount" title="${(
-          r.paymentAmount || 0
-        ).toLocaleString()}">₦${(r.paymentAmount || 0).toLocaleString()}</td>
-        <td class="col-status" title="${r.status || ""}">${r.status || ""}</td>
-        <td class="col-actions">
-          <button onclick="editRecord('${r._id}')" class="small">Edit</button>
-          <button onclick="deleteRecord('${
+          console.log(
+            "Fetching records with filters:",
+            Object.fromEntries(params)
+          );
+
+          const resp = await fetch(api(`/class-records?${params.toString()}`));
+          if (!resp.ok) {
+            console.error("Failed to load records:", resp.status);
+            return;
+          }
+
+          const records = await resp.json();
+          console.log("Loaded records:", records.length);
+
+          const tbody = document.querySelector("#recordsTable tbody");
+          tbody.innerHTML = records
+            .map(
+              (r) => `
+        <tr data-id="${r._id}">
+          <td><input type="checkbox" class="record-select" value="${
             r._id
-          }')" class="small danger">Delete</button>
-        </td>
-      </tr>
-    `;
-          })
-          .join("");
+          }"></td>
+          <td>${new Date(
+            r.dateSubmitted || r.startTime
+          ).toLocaleDateString()}</td>
+          <td>${r.tutorId?.name || ""}</td>
+          <td>${r.studentId?.name || ""}</td>
+          <td>${r.classLevel || ""}</td>
+          <td>${r.subject || ""}</td>
+          <td>${r.topic || ""}</td>
+          <td>${new Date(r.startTime).toLocaleString()}</td>
+          <td>${new Date(r.endTime).toLocaleString()}</td>
+          <td>₦${(r.paymentAmount || 0).toLocaleString()}</td>
+          <td>${r.status || ""}</td>
+          <td>
+            <button onclick="editRecord('${r._id}')" class="small">Edit</button>
+            <button onclick="deleteRecord('${
+              r._id
+            }')" class="small danger">Delete</button>
+          </td>
+        </tr>
+      `
+            )
+            .join("");
+        } catch (err) {
+          console.error("Error loading records:", err);
+          document.getElementById("adminMsg").textContent =
+            "Failed to load records";
+        }
       }
       function toggleSelectAll() {
         const selectAll = document.getElementById("selectAll");
@@ -911,6 +977,21 @@
           } successfully`;
         }
       }
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        await loadFilterOptions();
+        loadRecords();
+        loadPendingRecords();
+      });
+
+      document
+        .querySelectorAll("#filterTutor, #filterClass, #filterStudent")
+        .forEach((filter) =>
+          filter.addEventListener("change", () => {
+            console.log("Filter changed:", filter.id);
+            loadRecords();
+          })
+        );
       loadFilterOptions();
       loadTutors();
       loadRecords();
