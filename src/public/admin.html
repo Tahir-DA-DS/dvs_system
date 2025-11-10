@@ -98,11 +98,13 @@
               Filter Student
               <select id="filterStudent" onchange="loadRecords()">
                 <option value="">All Students</option>
-              </select>
-            </label><br>
+              </select> </label
+            ><br />
             <button onclick="loadRecords()">Refresh</button>
             <button onclick="downloadRawCSV()">Download Displayed CSV</button>
-            <button onclick="bulkDelete()" class="danger">Delete Selected</button>
+            <button onclick="bulkDelete()" class="danger">
+              Delete Selected
+            </button>
           </div>
         </div>
         <div style="overflow: auto; margin-top: 10px">
@@ -237,6 +239,9 @@
         const from = document.getElementById("adFrom").value;
         const to = document.getElementById("adTo").value;
 
+        const subject = document.getElementById("crSubject").value;
+        const rate = getRate(classLevel, subject);
+
         const params = new URLSearchParams();
         if (tutorId) params.set("tutorId", tutorId);
         if (classLevel) params.set("classLevel", classLevel);
@@ -314,7 +319,20 @@
       //   a.href = url.toString();
       //   a.click();
       // }
-      function calculateAmount(classLevel, startTime, endTime) {
+      // function calculateAmount(classLevel, startTime, endTime) {
+      //   const start = new Date(startTime);
+      //   const end = new Date(endTime);
+
+      //   if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+      //     return 0;
+      //   }
+
+      //   const rate = getRateLocal(classLevel);
+      //   const minutes = (end.getTime() - start.getTime()) / 60000;
+      //   const hours = minutes / 60;
+      //   return Math.round(rate * hours);
+      // }
+      function calculateAmount(classLevel, subject, startTime, endTime) {
         const start = new Date(startTime);
         const end = new Date(endTime);
 
@@ -322,7 +340,7 @@
           return 0;
         }
 
-        const rate = getRateLocal(classLevel);
+        const rate = getRateLocal(classLevel, subject);
         const minutes = (end.getTime() - start.getTime()) / 60000;
         const hours = minutes / 60;
         return Math.round(rate * hours);
@@ -738,12 +756,17 @@
         return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
       }
 
-      function getRateLocal(classLevel) {
+      const classLevel = document.getElementById("crClass").value;
+      const subject = document.getElementById("crSubject").value;
+
+      function getRateLocal(classLevel, subject) {
+        if (subject && String(subject).toLowerCase().trim() === "igbo")
+          return 4000;
         const level = (classLevel || "").toLowerCase().trim();
-        if (level === "nursery" || /\byear\s*(?:[1-6])\b/i.test(classLevel))
+        if (level === "nursery" || /\byear\s*(?:[1-6])\b/i.test(level))
           return 3800;
-        if (/\byear\s*(?:7|8|9|10)\b/i.test(classLevel)) return 4300;
-        if (/\byear\s*(?:11|12)\b/i.test(classLevel)) return 5000;
+        if (/\byear\s*(?:7|8|9|10)\b/i.test(level)) return 4300;
+        if (/\byear\s*(?:11|12)\b/i.test(level)) return 5000;
         return 0;
       }
 
@@ -942,8 +965,9 @@
         const startTime = document.getElementById("editStart").value;
         const endTime = document.getElementById("editEnd").value;
         const classLevel = document.getElementById("editClass").value;
+        const subject = document.getElementById("editSubject")?.value || "";
 
-        const amount = calculateAmount(classLevel, startTime, endTime);
+        const amount = calculateAmount(classLevel, subject, startTime, endTime);
         document.getElementById(
           "editAmount"
         ).textContent = `₦${amount.toLocaleString()}`;

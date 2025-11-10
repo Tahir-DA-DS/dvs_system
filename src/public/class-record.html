@@ -52,8 +52,13 @@
           Payment: <span id="crPayment">₦0</span>
           <span class="muted" id="crRate"></span>
         </div>
-        <button onclick="createClassRecord()">Submit Class Record</button>
-        <div id="crMsg" class="muted"></div>
+        <div>
+          <button id="crSubmit" class="submit-btn">Submit</button>
+          <span id="crMsg" class="muted-inline"></span>
+        </div>
+        <div id="toast" class="toast" role="status" aria-live="polite"></div>
+        <!-- <button onclick="createClassRecord()">Submit Class Record</button>
+        <div id="crMsg" class="muted"></div> -->
       </section>
     </div>
 
@@ -85,12 +90,14 @@
           .join("");
       }
 
-      function getRate(classLevel) {
-        const level = (classLevel || "").toLowerCase().trim();
-        if (level === "nursery" || /\byear\s*(?:[1-6])\b/i.test(classLevel))
-          return 3800;
-        if (/\byear\s*(?:7|8|9|10)\b/i.test(classLevel)) return 4300;
-        if (/\byear\s*(?:11|12)\b/i.test(classLevel)) return 5000;
+      function getRate(classLevel, subject) {
+        if (subject && String(subject).toLowerCase().trim() === "igbo")
+          return 4000;
+
+        const lvl = (classLevel || "").toLowerCase().trim();
+        if (lvl === "nursery" || /\byear\s*(?:[1-6])\b/i.test(lvl)) return 3800;
+        if (/\byear\s*(?:7|8|9|10)\b/i.test(lvl)) return 4300;
+        if (/\byear\s*(?:11|12)\b/i.test(lvl)) return 5000;
         return 0;
       }
 
@@ -149,17 +156,66 @@
             : "";
         }
       });
+      function showToast(msg, type = "success", timeout = 5000) {
+        const t = document.getElementById("toast");
+        if (!t) return;
+        t.textContent = msg;
+        t.className = `toast ${type} show`;
+        clearTimeout(t._hideTimer);
+        if (timeout > 0)
+          t._hideTimer = setTimeout(() => t.classList.remove("show"), timeout);
+      }
+
+      function setSubmitState(disabled, text) {
+        const btn = document.getElementById("crSubmit");
+        if (!btn) return;
+        btn.disabled = !!disabled;
+        if (disabled) {
+          btn.setAttribute("aria-busy", "true");
+          btn.dataset.origText = btn.textContent;
+          if (text) btn.textContent = text;
+        } else {
+          btn.removeAttribute("aria-busy");
+          btn.textContent = btn.dataset.origText || btn.textContent;
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const btn = document.getElementById("crSubmit");
+        if (btn)
+          btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            createClassRecord();
+          });
+      });
       async function createClassRecord() {
+        const btn = document.getElementById("crSubmit");
+        if (btn && btn.disabled) return; // guard against double submit
+        setSubmitState(true, "Submitting...");
+
+        // clear previous messages
+        document.getElementById("crMsg").textContent = "";
+
         const start = document.getElementById("crStart").value;
         const end = document.getElementById("crEnd").value;
         const s = new Date(start);
         const e = new Date(end);
 
+        // basic date validation
+        if (isNaN(s.getTime()) || isNaN(e.getTime()) || e <= s) {
+          const msg = "Invalid start/end times.";
+          document.getElementById("crMsg").textContent = msg;
+          showToast(msg, "error");
+          setSubmitState(false);
+          return;
+        }
+
         const classLevel = document.getElementById("crClass").value;
         const rate = getRate(classLevel);
+        const subject = document.getElementById("crSubject").value;
 
-        const startTime = document.getElementById("crStart").value;
-        const endTime = document.getElementById("crEnd").value;
+        const startTime = start;
+        const endTime = end;
         const minutes = (e.getTime() - s.getTime()) / 60000;
         const hours = minutes / 60;
         const amount = Math.round(rate * hours);
@@ -167,8 +223,11 @@
         // ✅ Duration validation — only allow 30 min, 1 hr, 1 hr 30 min, or 2 hrs
         const allowedDurations = [30, 60, 90, 120];
         if (!allowedDurations.includes(minutes)) {
-          document.getElementById("crMsg").textContent =
+          const msg =
             "Invalid class duration. Allowed durations are 30 min, 1 hr, 1 hr 30 min, or 2 hrs.";
+          document.getElementById("crMsg").textContent = msg;
+          showToast(msg, "error");
+          setSubmitState(false);
           return;
         }
 
@@ -194,8 +253,10 @@
         if (isLate) {
           const reason = document.getElementById("crLateReason").value;
           if (!reason) {
-            document.getElementById("crMsg").textContent =
-              "Please provide a reason for late submission.";
+            const msg = "Please provide a reason for late submission.";
+            document.getElementById("crMsg").textContent = msg;
+            showToast(msg, "error");
+            setSubmitState(false);
             return;
           }
           payload.reason = reason;
@@ -213,23 +274,35 @@
             body: JSON.stringify(payload),
           });
 
-          const out = await res.json();
+          const out = await res.json().catch(() => ({}));
           if (res.ok) {
-            document.getElementById("crMsg").textContent = isLate
-              ? `Record submitted for approval. Record ID: ${
-                  out.recordId || "N/A"
-                }.`
-              : `Record submitted successfully! Record ID: ${
-                  out.recordId || "N/A"
-                }.`;
+            const id = out.recordId || out._id || "N/A";
+            const successMsg = isLate
+              ? `Record submitted for approval. Record ID: ${id}.`
+              : `Record submitted successfully! Record ID: ${id}.`;
+            document.getElementById("crMsg").textContent = successMsg;
+            showToast(successMsg, "success");
+
+            // show updated payment immediately
+            document.getElementById(
+              "crPayment"
+            ).textContent = `₦${amount.toLocaleString()}`;
+
+            // keep submit button disabled briefly to indicate completed state
+            setSubmitState(true, "Submitted");
+            setTimeout(() => setSubmitState(false), 3000);
           } else {
-            document.getElementById("crMsg").textContent =
-              out.message || "Submission failed.";
+            const msg = out.message || "Submission failed.";
+            document.getElementById("crMsg").textContent = msg;
+            showToast(msg, "error");
+            setSubmitState(false);
           }
         } catch (error) {
-          document.getElementById("crMsg").textContent =
-            "Network error. Please try again.";
+          const msg = "Network error. Please try again.";
+          document.getElementById("crMsg").textContent = msg;
+          showToast(msg, "error");
           console.error(error);
+          setSubmitState(false);
         }
       }
 

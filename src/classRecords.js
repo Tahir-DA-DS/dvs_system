@@ -238,7 +238,8 @@ router.post("/late-submission", async (req, res) => {
     }
 
     // --- Compute payment ---
-    const paymentAmount = calculatePaymentAmount(classLevel, start, end);
+    const paymentAmount = calculatePaymentAmount(classLevel, subject, start, end);
+    // const paymentAmount = calcPaymentAmount(classLevel, subject, startTime, endTime);
 
     // --- Save record with Pending Approval status ---
     const record = await ClassRecord.create({

@@ -61,25 +61,27 @@ export const Student = mongoose.model('Student', StudentSchema);
 export const ClassRecord = mongoose.model('ClassRecord', ClassRecordSchema);
 export const AdminActionLog = mongoose.model('AdminActionLog', AdminActionLogSchema);
 
-export function getHourlyRateForClassLevel(classLevel) {
-  // Nursery–Year 6 → ₦3,800 per hour
-  // Year 7–Year 10 → ₦4,300 per hour
-  // Year 11–Year 12 → ₦5,000 per hour
-  const lower = classLevel.toLowerCase();
-  if (lower === 'nursery' || /year\s*[1-6]/i.test(classLevel)) return 3800;
-  if (/year\s*(7|8|9|10)/i.test(classLevel)) return 4300;
-  if (/year\s*(11|12)/i.test(classLevel)) return 5000;
+export function getHourlyRateForClassLevel(classLevel, subject) {
+  if (subject && String(subject).toLowerCase().trim() === "igbo") return 4000;
+  const lvl = (classLevel || "").toLowerCase().trim();
+  if (lvl === "nursery" || /\byear\s*(?:[1-6])\b/i.test(lvl)) return 3800;
+  if (/\byear\s*(?:7|8|9|10)\b/i.test(lvl)) return 4300;
+  if (/\byear\s*(?:11|12)\b/i.test(lvl)) return 5000;
   return 0;
 }
 
-export function calculatePaymentAmount(classLevel, startTime, endTime) {
-  const rate = getHourlyRateForClassLevel(classLevel);
+
+export function calculatePaymentAmount(classLevel, subject, startTime, endTime) {
   const start = new Date(startTime);
   const end = new Date(endTime);
-  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return 0;
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+    return 0;
+  }
+
+  const rate = getRateLocal(classLevel, subject);
   const minutes = (end.getTime() - start.getTime()) / 60000;
   const hours = minutes / 60;
-  // Round to nearest naira
   return Math.round(rate * hours);
 }
 

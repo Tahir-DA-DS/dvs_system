@@ -129,6 +129,31 @@ tbody tr:hover { background: rgba(37,99,235,0.06); }
 tbody tr:nth-child(odd) { background: rgba(255,255,255,0.02); }
 thead th { position: sticky; top: 0; z-index: 1; }
 
+.toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  min-width: 260px;
+  max-width: calc(100% - 32px);
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  transform: translateY(12px);
+  opacity: 0;
+  transition: transform .22s ease, opacity .22s ease;
+  z-index: 9999;
+  pointer-events: none;
+}
+.toast.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
+.toast.success { background: #16a34a; }
+.toast.error { background: #dc2626; }
+
+.submit-btn[disabled] { opacity: .6; cursor: not-allowed; }
+
+/* small message shown next to submit button */
+.muted-inline { margin-left: 10px; color: var(--muted); font-size: 13px; }
 /* Mobile optimizations */
 @media (max-width: 700px) {
   .container { padding: 18px 14px; }
