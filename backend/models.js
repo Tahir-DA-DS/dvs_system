@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const { Schema } = mongoose; 
+const { Schema } = mongoose;
 
 const TutorSchema = new mongoose.Schema(
   {
@@ -15,7 +15,7 @@ const TutorSchema = new mongoose.Schema(
 const StudentSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
-    classLevel: { type: String, required: true }, // Nursery, Year 1-12
+    classLevel: { type: String, required: true },
     enrolledSubjects: { type: [String], default: [] }
   },
   { timestamps: true }
@@ -32,18 +32,34 @@ const ClassRecordSchema = new mongoose.Schema(
     endTime: { type: Date, required: true },
     dateSubmitted: { type: Date, required: true, default: () => new Date() },
     paymentAmount: { type: Number, required: true },
-    status: { type: String, enum: ['Valid','Pending Approval', 'Approved', 'Late Approved', 'Rejected'], default: 'Valid' },
+    status: {
+      type: String,
+      enum: ['Valid', 'Pending Approval', 'Approved', 'Late Approved', 'Rejected'],
+      default: 'Valid'
+    },
     lateApprovedBy: { type: String },
     lateApprovedAt: { type: Date },
-  approvalRequest: {
-    reason: String,
-    requestDate: Date,
-    approvedBy: { type: Schema.Types.ObjectId, ref: 'Admin' },
-    approvalDate: Date
-  }
+    approvalRequest: {
+      reason: String,
+      requestDate: Date,
+      approvedBy: { type: Schema.Types.ObjectId, ref: 'Admin' },
+      approvalDate: Date
+    }
   },
   { timestamps: true }
 );
+
+// ── Indexes for fast filtering ──
+// Admin filters by date range most often
+ClassRecordSchema.index({ startTime: 1 });
+// Filter by tutor (payment calculations)
+ClassRecordSchema.index({ tutorId: 1 });
+// Filter by student (Phase 5 AI reports)
+ClassRecordSchema.index({ studentId: 1 });
+// Compound: tutor + date range (most common admin query)
+ClassRecordSchema.index({ tutorId: 1, startTime: 1 });
+// Compound: student + date range (Phase 5 reports)
+ClassRecordSchema.index({ studentId: 1, startTime: 1 });
 
 const AdminActionLogSchema = new mongoose.Schema(
   {
@@ -56,20 +72,22 @@ const AdminActionLogSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+AdminActionLogSchema.index({ tutorId: 1 });
+AdminActionLogSchema.index({ createdAt: 1 });
+
 export const Tutor = mongoose.model('Tutor', TutorSchema);
 export const Student = mongoose.model('Student', StudentSchema);
 export const ClassRecord = mongoose.model('ClassRecord', ClassRecordSchema);
 export const AdminActionLog = mongoose.model('AdminActionLog', AdminActionLogSchema);
 
 export function getHourlyRateForClassLevel(classLevel, subject) {
-  if (subject && String(subject).toLowerCase().trim() === "igbo") return 4000;
-  const lvl = (classLevel || "").toLowerCase().trim();
-  if (lvl === "nursery" || /\byear\s*(?:[1-6])\b/i.test(lvl)) return 3800;
+  if (subject && String(subject).toLowerCase().trim() === 'igbo') return 4000;
+  const lvl = (classLevel || '').toLowerCase().trim();
+  if (lvl === 'nursery' || /\byear\s*(?:[1-6])\b/i.test(lvl)) return 3800;
   if (/\byear\s*(?:7|8|9|10)\b/i.test(lvl)) return 4300;
   if (/\byear\s*(?:11|12)\b/i.test(lvl)) return 5000;
   return 0;
 }
-
 
 export function calculatePaymentAmount(classLevel, subject, startTime, endTime) {
   const start = new Date(startTime);
@@ -84,5 +102,3 @@ export function calculatePaymentAmount(classLevel, subject, startTime, endTime) 
   const hours = minutes / 60;
   return Math.round(rate * hours);
 }
-
-

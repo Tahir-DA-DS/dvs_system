@@ -2,47 +2,55 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import tutorRouter from './tutors.js';
 import studentRouter from './students.js';
 import classRecordRouter from './classRecords.js';
 import adminRouter from './admin.js';
-import { Tutor, Student, AdminActionLog, ClassRecord} from './models.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { Tutor, Student, AdminActionLog, ClassRecord } from './models.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/dvs_attendance';
 
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:5173',                // Vite dev server
+  'http://localhost:3000',               // local fallback
+  process.env.FRONTEND_URL,             // your Vercel URL (set in Render env vars)
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked: ${origin}`));
+    }
+  },
+  credentials: true,
+}));
+
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+
+// ── Health endpoint — keeps Render free tier warm ──
+app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
 
 app.use('/api/tutors', tutorRouter);
 app.use('/api/students', studentRouter);
 app.use('/api/class-records', classRecordRouter);
 app.use('/api/admin', adminRouter);
 
-app.get('/', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
 mongoose
   .connect(MONGO_URI)
   .then(async () => {
     console.log('✅ Connected to MongoDB');
 
-    // 🧩 Add this line — it automatically removes outdated indexes (like userId_1)
     await Tutor.syncIndexes();
     await Student.syncIndexes();
     await ClassRecord.syncIndexes();
     await AdminActionLog.syncIndexes();
-    
-    console.log('✅ Tutor indexes synchronized with schema');
+
+    console.log('✅ Indexes synchronized');
 
     app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
   })
