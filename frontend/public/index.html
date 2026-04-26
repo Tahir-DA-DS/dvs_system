@@ -1,35 +1,623 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Dynamic Virtuall Solutions</title>
-    <link rel="stylesheet" href="/styles.css" />
-  </head>
-  <body>
-    <header>
-      <div class="container">
-        <nav>
-          <a href="/tutor.html">Tutor Sign-Up</a>
-          <a href="/student.html">Register Student</a>
-          <a href="/class-record.html">Class Record</a>
-          <a href="/admin-login.html">Admin</a>
-        </nav>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DVS — Dynamic Virtual Solutions</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Lora:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue:        #1a6eb5;
+    --blue-dark:   #0c4a85;
+    --blue-deeper: #0a3560;
+    --blue-light:  #4a9ad4;
+    --blue-pale:   #e8f1fb;
+    --blue-bg:     #f0f7ff;
+    --purple:      #7f77dd;
+    --purple-pale: #f0eeff;
+    --mint:        #1d9e75;
+    --mint-pale:   #e0f5ee;
+    --amber:       #f5a623;
+    --amber-pale:  #fff8e6;
+    --white:       #ffffff;
+    --text-dark:   #1a2540;
+    --text-mid:    #4a5a7a;
+    --text-light:  #8a9ab8;
+    --bg-soft:     #f7faff;
+    --border:      rgba(26,110,181,0.12);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--white);
+    color: var(--text-dark);
+    overflow-x: hidden;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 5%;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 2px 20px rgba(26,110,181,0.06);
+  }
+  .nav-logo {
+    font-family: 'Lora', serif;
+    color: var(--blue-dark);
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none;
+  }
+  .nav-logo-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--blue);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; flex-shrink: 0;
+  }
+  .nav-logo-text { display: flex; flex-direction: column; line-height: 1.15; }
+  .nav-logo-dvs { font-size: 1.15rem; font-weight: 700; color: var(--blue-dark); }
+  .nav-logo-full { font-size: 0.62rem; font-weight: 600; color: var(--text-light); letter-spacing: 0.05em; text-transform: uppercase; }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    color: var(--text-mid); text-decoration: none;
+    font-size: 0.9rem; font-weight: 600;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--blue); }
+  .nav-cta {
+    background: var(--blue); color: var(--white);
+    border: none; padding: 0.6rem 1.4rem;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.88rem; font-weight: 700;
+    border-radius: 50px; cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+    box-shadow: 0 4px 14px rgba(26,110,181,0.25);
+  }
+  .nav-cta:hover { background: var(--blue-dark); transform: translateY(-1px); }
+
+  /* HERO */
+  #hero {
+    min-height: 100vh;
+    display: flex; align-items: center;
+    padding: 8rem 5% 5rem;
+    background: var(--blue-bg);
+    position: relative; overflow: hidden;
+  }
+  .hero-blob {
+    position: absolute; border-radius: 50%; opacity: 0.4;
+    pointer-events: none;
+  }
+  .blob1 { width: 500px; height: 500px; background: radial-gradient(circle, #b5d4f4 0%, transparent 70%); top: -120px; right: -80px; }
+  .blob2 { width: 360px; height: 360px; background: radial-gradient(circle, #d0ccf8 0%, transparent 70%); bottom: 40px; right: 28%; }
+  .blob3 { width: 260px; height: 260px; background: radial-gradient(circle, #9fe1cb 0%, transparent 70%); bottom: -60px; left: 4%; }
+
+  .hero-layout {
+    position: relative;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 4rem; align-items: center; width: 100%;
+    max-width: 1200px; margin: 0 auto;
+  }
+  @media (max-width: 820px) {
+    .hero-layout { grid-template-columns: 1fr; }
+    .hero-visual { display: none; }
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--white);
+    border: 1px solid rgba(26,110,181,0.2);
+    color: var(--blue); font-size: 0.78rem; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 0.4rem 1rem; border-radius: 50px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 10px rgba(26,110,181,0.1);
+  }
+  .badge-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--mint);
+    animation: blink 2s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.25;} }
+
+  h1 {
+    font-family: 'Lora', serif;
+    font-size: clamp(2.4rem, 4.5vw, 3.6rem);
+    font-weight: 700; line-height: 1.15;
+    color: var(--blue-deeper);
+    margin-bottom: 1.2rem;
+  }
+  h1 em { font-style: normal; color: var(--blue); }
+  .hero-sub {
+    font-size: 1.05rem; font-weight: 500; line-height: 1.75;
+    color: var(--text-mid); max-width: 500px;
+    margin-bottom: 2.2rem;
+  }
+  .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
+
+  .btn-primary {
+    background: var(--blue); color: var(--white);
+    padding: 0.9rem 2rem; border-radius: 50px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.95rem; font-weight: 700;
+    text-decoration: none; border: none; cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    box-shadow: 0 6px 20px rgba(26,110,181,0.3);
+    display: inline-block;
+  }
+  .btn-primary:hover { background: var(--blue-dark); transform: translateY(-2px); }
+  .btn-outline {
+    background: var(--white); color: var(--blue);
+    padding: 0.9rem 2rem; border-radius: 50px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.95rem; font-weight: 700;
+    text-decoration: none; border: 2px solid var(--blue); cursor: pointer;
+    transition: all 0.2s; display: inline-block;
+  }
+  .btn-outline:hover { background: var(--blue-pale); transform: translateY(-2px); }
+
+  .hero-stats { display: flex; gap: 1.2rem; flex-wrap: wrap; }
+  .stat-box {
+    background: var(--white); border-radius: 14px; padding: 1rem 1.4rem;
+    box-shadow: 0 4px 18px rgba(26,110,181,0.1);
+    border: 1px solid var(--border);
+  }
+  .stat-num {
+    font-family: 'Lora', serif;
+    font-size: 1.9rem; font-weight: 700; color: var(--blue); line-height: 1;
+  }
+  .stat-label { font-size: 0.78rem; font-weight: 600; color: var(--text-light); margin-top: 4px; }
+
+  .hero-visual { display: flex; flex-direction: column; gap: 1rem; }
+  .vis-card {
+    background: var(--white); border-radius: 16px; padding: 1.1rem 1.3rem;
+    box-shadow: 0 8px 30px rgba(26,110,181,0.1);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; gap: 1rem;
+    transition: transform 0.2s;
+    animation: floatUp 0.6s ease both;
+  }
+  .vis-card:hover { transform: translateX(-4px); }
+  .vis-card:nth-child(1) { animation-delay: 0.1s; }
+  .vis-card:nth-child(2) { animation-delay: 0.2s; margin-left: 1.5rem; }
+  .vis-card:nth-child(3) { animation-delay: 0.3s; }
+  .vis-card:nth-child(4) { animation-delay: 0.4s; margin-left: 1.5rem; }
+  @keyframes floatUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  .vis-icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; flex-shrink: 0;
+  }
+  .vi-blue   { background: var(--blue-pale); }
+  .vi-purple { background: var(--purple-pale); }
+  .vi-mint   { background: var(--mint-pale); }
+  .vi-amber  { background: var(--amber-pale); }
+  .vis-title { font-size: 0.9rem; font-weight: 700; color: var(--text-dark); }
+  .vis-sub   { font-size: 0.78rem; font-weight: 500; color: var(--text-light); margin-top: 1px; }
+  .vis-pill {
+    margin-left: auto; font-size: 0.72rem; font-weight: 700;
+    padding: 3px 10px; border-radius: 50px; white-space: nowrap;
+  }
+  .pill-blue   { background: var(--blue-pale); color: var(--blue-dark); }
+  .pill-mint   { background: var(--mint-pale); color: #0a5e3a; }
+  .pill-amber  { background: var(--amber-pale); color: #7a4800; }
+  .pill-purple { background: var(--purple-pale); color: #3c3489; }
+
+  /* SECTIONS */
+  section { padding: 5.5rem 5%; }
+  .section-inner { max-width: 1200px; margin: 0 auto; }
+  .section-label {
+    font-size: 0.75rem; font-weight: 800; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--blue); margin-bottom: 0.6rem;
+  }
+  h2 {
+    font-family: 'Lora', serif;
+    font-size: clamp(1.8rem, 3vw, 2.6rem);
+    color: var(--blue-deeper); line-height: 1.25; margin-bottom: 0.8rem;
+  }
+  .section-intro {
+    color: var(--text-mid); font-size: 1rem; font-weight: 500;
+    max-width: 520px; line-height: 1.75; margin-bottom: 3rem;
+  }
+
+  /* ABOUT */
+  #about { background: var(--white); }
+  .features-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.2rem;
+  }
+  .feature-card {
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: 18px; padding: 1.8rem 1.6rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .feature-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(26,110,181,0.1); }
+  .feature-icon {
+    width: 50px; height: 50px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; margin-bottom: 1rem;
+  }
+  .fi-blue   { background: var(--blue-pale); }
+  .fi-purple { background: var(--purple-pale); }
+  .fi-mint   { background: var(--mint-pale); }
+  .fi-amber  { background: var(--amber-pale); }
+  .feature-card h3 { font-size: 1.05rem; font-weight: 800; color: var(--blue-deeper); margin-bottom: 0.5rem; }
+  .feature-card p { font-size: 0.88rem; color: var(--text-mid); line-height: 1.65; font-weight: 500; }
+
+  /* PROGRAMS */
+  #programs { background: var(--blue-bg); }
+  .programs-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: start; }
+  @media (max-width: 768px) { .programs-layout { grid-template-columns: 1fr; } }
+  .pills-wrap { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .grade-pill {
+    background: var(--white); color: var(--blue-dark);
+    border: 1.5px solid rgba(26,110,181,0.2);
+    font-size: 0.85rem; font-weight: 700;
+    padding: 0.45rem 1.1rem; border-radius: 50px;
+    transition: all 0.18s; cursor: default;
+  }
+  .grade-pill:hover { background: var(--blue); color: var(--white); border-color: var(--blue); }
+  .country-pill {
+    background: var(--white); color: #0a5e3a;
+    border: 1.5px solid rgba(29,158,117,0.2);
+    font-size: 0.85rem; font-weight: 700;
+    padding: 0.45rem 1.1rem; border-radius: 50px;
+    transition: all 0.18s;
+  }
+  .country-pill:hover { background: var(--mint); color: var(--white); border-color: var(--mint); }
+
+  /* TESTIMONIALS */
+  #testimonials { background: var(--white); }
+  .testi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.4rem; }
+  .testi-card {
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: 18px; padding: 1.8rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .testi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(26,110,181,0.1); }
+  .stars { font-size: 0.85rem; letter-spacing: 2px; color: var(--amber); margin-bottom: 0.9rem; }
+  .testi-text { font-size: 0.92rem; line-height: 1.72; color: var(--text-mid); font-weight: 500; font-style: italic; margin-bottom: 1.4rem; }
+  .testi-author { display: flex; align-items: center; gap: 0.8rem; }
+  .testi-avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.78rem; font-weight: 800; flex-shrink: 0;
+  }
+  .av-blue   { background: var(--blue-pale); color: var(--blue-dark); }
+  .av-purple { background: var(--purple-pale); color: #3c3489; }
+  .av-mint   { background: var(--mint-pale); color: #0a5e3a; }
+  .testi-name { font-size: 0.9rem; font-weight: 800; color: var(--text-dark); }
+  .testi-role { font-size: 0.78rem; font-weight: 500; color: var(--text-light); }
+
+  /* ENROLL */
+  #enroll { background: var(--blue-bg); }
+  .enroll-box {
+    max-width: 660px; margin: 0 auto;
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 24px; padding: 4rem 3rem; text-align: center;
+    box-shadow: 0 16px 60px rgba(26,110,181,0.1);
+  }
+  .enroll-emoji { font-size: 3rem; margin-bottom: 1rem; display: block; }
+  .enroll-box h2 { margin-bottom: 0.7rem; }
+  .enroll-box > p { color: var(--text-mid); font-size: 1rem; font-weight: 500; margin-bottom: 2rem; line-height: 1.7; }
+  .enroll-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+  .portal-nudge {
+    margin-top: 1.8rem; background: var(--blue-bg);
+    border: 1px solid rgba(26,110,181,0.15); border-radius: 12px;
+    padding: 1rem 1.5rem;
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  }
+  .portal-nudge p { font-size: 0.88rem; font-weight: 600; color: var(--text-mid); }
+  .portal-nudge strong { color: var(--blue); }
+  .btn-sm {
+    background: var(--blue); color: var(--white);
+    padding: 0.5rem 1.2rem; border-radius: 50px;
+    font-family: 'Nunito', sans-serif; font-size: 0.85rem; font-weight: 700;
+    text-decoration: none; white-space: nowrap; transition: background 0.2s;
+  }
+  .btn-sm:hover { background: var(--blue-dark); }
+
+  /* CONTACT */
+  #contact { background: var(--white); }
+  .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: start; }
+  @media (max-width: 768px) { .contact-grid { grid-template-columns: 1fr; } }
+  .contact-item { display: flex; gap: 1rem; margin-bottom: 1.6rem; align-items: flex-start; }
+  .contact-icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: var(--blue-pale); border: 1px solid rgba(26,110,181,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; flex-shrink: 0;
+  }
+  .contact-label { font-size: 0.75rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.06em; }
+  .contact-val { font-size: 0.95rem; font-weight: 600; color: var(--text-dark); margin-top: 3px; }
+  .contact-form { display: flex; flex-direction: column; gap: 0.9rem; }
+  .contact-form input, .contact-form textarea {
+    background: var(--bg-soft); border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 0.8rem 1rem;
+    color: var(--text-dark); font-family: 'Nunito', sans-serif;
+    font-size: 0.92rem; font-weight: 500; resize: vertical;
+    transition: border-color 0.2s;
+  }
+  .contact-form input:focus, .contact-form textarea:focus { outline: none; border-color: var(--blue); background: var(--white); }
+  .contact-form input::placeholder, .contact-form textarea::placeholder { color: var(--text-light); }
+
+  /* FOOTER */
+  footer {
+    background: var(--blue-deeper);
+    padding: 2rem 5%;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
+  }
+  .footer-logo { font-family: 'Lora', serif; font-size: 1.1rem; font-weight: 700; color: var(--white); }
+  .footer-copy { font-size: 0.8rem; color: rgba(255,255,255,0.5); font-weight: 500; }
+  .footer-links { display: flex; gap: 1.5rem; }
+  .footer-links a { font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.6); text-decoration: none; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--white); }
+
+  /* REVEAL */
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.55s ease, transform 0.55s ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-icon">🎓</div>
+    <div class="nav-logo-text">
+      <span class="nav-logo-dvs">DVS</span>
+      <span class="nav-logo-full">Dynamic Virtual Solutions</span>
+    </div>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#programs">Programs</a></li>
+    <li><a href="#testimonials">Testimonials</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <a href="portal.html" class="nav-cta">Portal Login</a>
+</nav>
+
+<section id="hero">
+  <div class="hero-blob blob1"></div>
+  <div class="hero-blob blob2"></div>
+  <div class="hero-blob blob3"></div>
+  <div class="hero-layout">
+    <div>
+      <div class="hero-badge">
+        <div class="badge-dot"></div>
+        Virtual Tutoring Platform
       </div>
-    </header>
-    <div class="hero">
-      <div class="container">
-        <h1>DVS Attendance System</h1>
-        <p class="muted">Choose a module to get started.</p>
-        <ul class="list links">
-          <li><a href="/tutor.html">Tutor Sign-Up</a></li>
-          <li><a href="/student.html">Register Student</a></li>
-          <li><a href="/class-record.html">Class Record</a></li>
-          <li><a href="/admin-login.html">Admin</a></li>
-        </ul>
+      <h1>Quality Tutoring,<br><em>Across Every Border</em></h1>
+      <p class="hero-sub">
+        DVS connects students from Nursery to Year 12 across multiple countries with qualified tutors —
+        tracking sessions, managing class records, and keeping learning accountable.
+      </p>
+      <div class="hero-actions">
+        <a href="#enroll" class="btn-primary">Enroll a Student</a>
+        <a href="#about" class="btn-outline">How It Works</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-box">
+          <div class="stat-num">500+</div>
+          <div class="stat-label">Students Enrolled</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num">12</div>
+          <div class="stat-label">Grade Levels</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num">6+</div>
+          <div class="stat-label">Countries</div>
+        </div>
       </div>
     </div>
-  </body>
-  </html>
+    <div class="hero-visual">
+      <div class="vis-card">
+        <div class="vis-icon vi-blue">🎓</div>
+        <div>
+          <div class="vis-title">Tutor Management</div>
+          <div class="vis-sub">Sign-up &amp; grade assignment</div>
+        </div>
+        <div class="vis-pill pill-blue">Active</div>
+      </div>
+      <div class="vis-card">
+        <div class="vis-icon vi-mint">✅</div>
+        <div>
+          <div class="vis-title">Attendance Tracked</div>
+          <div class="vis-sub">Today's session recorded</div>
+        </div>
+        <div class="vis-pill pill-mint">Done</div>
+      </div>
+      <div class="vis-card">
+        <div class="vis-icon vi-purple">👨‍🎓</div>
+        <div>
+          <div class="vis-title">New Student Registered</div>
+          <div class="vis-sub">Grade 7 · Nigeria</div>
+        </div>
+        <div class="vis-pill pill-purple">New</div>
+      </div>
+      <div class="vis-card">
+        <div class="vis-icon vi-amber">📋</div>
+        <div>
+          <div class="vis-title">Class Record Updated</div>
+          <div class="vis-sub">3 students present</div>
+        </div>
+        <div class="vis-pill pill-amber">Today</div>
+      </div>
+    </div>
+  </div>
+</section>
 
+<section id="about">
+  <div class="section-inner">
+    <div class="reveal">
+      <p class="section-label">What We Do</p>
+      <h2>A Complete Virtual<br>Tutoring System</h2>
+      <p class="section-intro">From tutor sign-up to class records, DVS handles the administrative side of virtual tutoring so tutors can focus on what matters — teaching.</p>
+    </div>
+    <div class="features-grid reveal">
+      <div class="feature-card">
+        <div class="feature-icon fi-blue">🎓</div>
+        <h3>Tutor Management</h3>
+        <p>Tutors sign up, get assigned to grades, and manage their students all in one place.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-purple">👨‍🎓</div>
+        <h3>Student Registration</h3>
+        <p>Register students with their grade, country, and contact details. Organised and searchable.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-mint">✅</div>
+        <h3>Attendance Tracking</h3>
+        <p>Record class sessions, mark attendance, and maintain a full history of every lesson.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-amber">🌍</div>
+        <h3>Multi-Country Support</h3>
+        <p>Students and tutors from different countries handled seamlessly under one system.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
+<section id="programs">
+  <div class="section-inner">
+    <div class="programs-layout">
+      <div class="reveal">
+        <p class="section-label">Grades We Cover</p>
+        <h2>From Nursery<br>to Year 12</h2>
+        <p class="section-intro">Every grade level is supported with dedicated tutors and structured class tracking.</p>
+        <div class="pills-wrap">
+          <span class="grade-pill">Nursery</span><span class="grade-pill">Year 1</span><span class="grade-pill">Year 2</span>
+          <span class="grade-pill">Year 3</span><span class="grade-pill">Year 4</span><span class="grade-pill">Year 5</span>
+          <span class="grade-pill">Year 6</span><span class="grade-pill">Year 7</span><span class="grade-pill">Year 8</span>
+          <span class="grade-pill">Year 9</span><span class="grade-pill">Year 10</span><span class="grade-pill">Year 11</span>
+          <span class="grade-pill">Year 12</span>
+        </div>
+      </div>
+      <div class="reveal">
+        <p class="section-label">Countries We Serve</p>
+        <h2>Learning Without<br>Boundaries</h2>
+        <p class="section-intro">Students join from across the world, getting the same quality of education wherever they are.</p>
+        <div class="pills-wrap">
+          <span class="country-pill">🇳🇬 Nigeria</span><span class="country-pill">🇬🇭 Ghana</span>
+          <span class="country-pill">🇰🇪 Kenya</span><span class="country-pill">🇿🇦 South Africa</span>
+          <span class="country-pill">🇬🇧 United Kingdom</span><span class="country-pill">🇺🇸 United States</span>
+          <span class="country-pill">🇨🇦 Canada</span><span class="country-pill">+ More</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="testimonials">
+  <div class="section-inner">
+    <div class="reveal" style="text-align:center;max-width:500px;margin:0 auto 3rem;">
+      <p class="section-label">Testimonials</p>
+      <h2>What Parents &amp; Students Say</h2>
+    </div>
+    <div class="testi-grid">
+      <div class="testi-card reveal">
+        <div class="stars">★★★★★</div>
+        <p class="testi-text">"My daughter's grades improved significantly after just two months with DVS. The tutors are patient, professional, and truly dedicated."</p>
+        <div class="testi-author">
+          <div class="testi-avatar av-blue">AM</div>
+          <div><div class="testi-name">Amina Mustapha</div><div class="testi-role">Parent · Lagos, Nigeria</div></div>
+        </div>
+      </div>
+      <div class="testi-card reveal">
+        <div class="stars">★★★★★</div>
+        <p class="testi-text">"The attendance tracking is brilliant. As an admin I always know exactly which students attended and who needs follow-up."</p>
+        <div class="testi-author">
+          <div class="testi-avatar av-mint">KO</div>
+          <div><div class="testi-name">Kwame Owusu</div><div class="testi-role">Coordinator · Accra, Ghana</div></div>
+        </div>
+      </div>
+      <div class="testi-card reveal">
+        <div class="stars">★★★★★</div>
+        <p class="testi-text">"I was nervous about virtual lessons but DVS made it so easy. My tutor is always prepared and the system keeps me on track."</p>
+        <div class="testi-author">
+          <div class="testi-avatar av-purple">TJ</div>
+          <div><div class="testi-name">Taiwo Johnson</div><div class="testi-role">Student · Grade 10</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="enroll">
+  <div class="section-inner">
+    <div class="enroll-box reveal">
+      <span class="enroll-emoji">🚀</span>
+      <p class="section-label" style="display:flex;justify-content:center;">Get Started</p>
+      <h2>Ready to Enroll?</h2>
+      <p>Join hundreds of students already benefiting from structured, tracked virtual tutoring. Register a student or sign up as a tutor today.</p>
+      <div class="enroll-actions">
+        <a href="student.html" class="btn-primary">Register a Student</a>
+        <a href="tutor.html" class="btn-outline">Sign Up as Tutor</a>
+      </div>
+      <div class="portal-nudge">
+        <p>Already registered? <strong>Access the full portal</strong> to manage records and sessions.</p>
+        <a href="portal.html" class="btn-sm">Go to Portal →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="contact">
+  <div class="section-inner">
+    <div class="contact-grid">
+      <div class="reveal">
+        <p class="section-label">Contact Us</p>
+        <h2>Get in Touch</h2>
+        <p class="section-intro">Questions about enrollment, tutoring schedules, or the system? We'd love to hear from you.</p>
+        <div class="contact-item">
+          <div class="contact-icon">📧</div>
+          <div><div class="contact-label">Email</div><div class="contact-val">support@dvsattendance.com</div></div>
+        </div>
+        <div class="contact-item">
+          <div class="contact-icon">📞</div>
+          <div><div class="contact-label">Phone / WhatsApp</div><div class="contact-val">+234 800 000 0000</div></div>
+        </div>
+        <div class="contact-item">
+          <div class="contact-icon">🕐</div>
+          <div><div class="contact-label">Operating Hours</div><div class="contact-val">Mon – Sat, 8am – 8pm (WAT)</div></div>
+        </div>
+      </div>
+      <div class="reveal">
+        <div class="contact-form">
+          <input type="text" placeholder="Your name">
+          <input type="email" placeholder="Email address">
+          <textarea rows="5" placeholder="Your message"></textarea>
+          <button class="btn-primary" style="align-self:flex-start;border:none;cursor:pointer;" onclick="alert('Message sent! We\'ll get back to you shortly.')">Send Message</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-logo">Dynamic Virtual Solutions</div>
+  <p class="footer-copy">© 2025 Dynamic Virtual Solutions. All rights reserved.</p>
+  <div class="footer-links">
+    <a href="portal.html">Portal</a>
+    <a href="admin-login.html">Admin</a>
+    <a href="#contact">Contact</a>
+  </div>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
