@@ -38,7 +38,6 @@
             <option>Sciences</option>
             <option>Igbo</option>
             <option>French</option>
-
           </select>
         </label>
         <button onclick="createTutor()">Save Tutor</button>
@@ -47,21 +46,29 @@
     </div>
 
     <script>
-      const api = (path) => `${location.origin}/api${path}`;
+      const API_BASE = window.location.hostname === 'localhost'
+        ? 'http://localhost:3000'
+        : 'https://dvs-system.onrender.com';
+
+      const api = (path) => `${API_BASE}/api${path}`;
+
       function getSelectedValues(select) {
-        return Array.from(select.selectedOptions).map(o=>o.value);
+        return Array.from(select.selectedOptions).map(o => o.value);
       }
+
       async function createTutor() {
         const name = document.getElementById('tutorName').value.trim();
         const accountNumber = document.getElementById('tutorAcct').value.trim();
         const bank = document.getElementById('tutorBank').value.trim();
         const subjects = getSelectedValues(document.getElementById('tutorSubjects'));
-        const res = await fetch(api('/tutors'), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, accountNumber, bank, subjects }) });
+        const res = await fetch(api('/tutors'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, accountNumber, bank, subjects })
+        });
         const out = await res.json();
         document.getElementById('tutorMsg').textContent = res.ok ? 'Tutor saved' : out.message;
       }
     </script>
   </body>
-  </html>
-
-
+</html>

@@ -18,14 +18,20 @@
       </section>
       <p class="muted">Hint: ask the system owner for the password.</p>
     </div>
+
     <script>
+      const API_BASE = window.location.hostname === 'localhost'
+        ? 'http://localhost:3000'
+        : 'https://dvs-system.onrender.com';
+
       async function login() {
         const val = document.getElementById('password').value;
         const msg = document.getElementById('msg');
         if (!val) { msg.textContent = 'Enter password'; return; }
-        // Validate against server by hitting a protected endpoint
         try {
-          const resp = await fetch(`${location.origin}/api/admin/tutors`, { headers: { 'x-admin-password': val } });
+          const resp = await fetch(`${API_BASE}/api/admin/tutors`, {
+            headers: { 'x-admin-password': val }
+          });
           if (!resp.ok) {
             msg.textContent = 'Invalid password';
             return;
@@ -38,6 +44,4 @@
       }
     </script>
   </body>
-  </html>
-
-
+</html>

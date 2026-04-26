@@ -29,15 +29,10 @@
         <label>Subject<select id="crSubject"></select></label>
         <label>Topic<input id="crTopic" /></label>
         <div class="row">
-          <label style="flex: 1"
-            >Start Time<input type="datetime-local" id="crStart"
-          /></label>
-          <label style="flex: 1"
-            >End Time<input type="datetime-local" id="crEnd"
-          /></label>
+          <label style="flex: 1">Start Time<input type="datetime-local" id="crStart" /></label>
+          <label style="flex: 1">End Time<input type="datetime-local" id="crEnd" /></label>
         </div>
-        <label
-          >Comment (optional)
+        <label>Comment (optional)
           <textarea id="crComment"></textarea>
         </label>
         <div id="lateSubmissionForm" style="display: none">
@@ -57,55 +52,50 @@
           <span id="crMsg" class="muted-inline"></span>
         </div>
         <div id="toast" class="toast" role="status" aria-live="polite"></div>
-        <!-- <button onclick="createClassRecord()">Submit Class Record</button>
-        <div id="crMsg" class="muted"></div> -->
       </section>
     </div>
 
     <script>
-      const api = (path) => `${location.origin}/api${path}`;
+      const API_BASE = window.location.hostname === 'localhost'
+        ? 'http://localhost:3000'
+        : 'https://dvs-system.onrender.com';
+
+      const api = (path) => `${API_BASE}/api${path}`;
+
       async function loadDropdowns() {
         const [tutors, students] = await Promise.all([
-          fetch(api("/tutors")).then((r) => r.json()),
-          fetch(api("/students")).then((r) => r.json()),
+          fetch(api('/tutors')).then(r => r.json()),
+          fetch(api('/students')).then(r => r.json()),
         ]);
-        const tutorSel = document.getElementById("crTutor");
+        const tutorSel = document.getElementById('crTutor');
         tutorSel.innerHTML =
           '<option value="">Select Tutor</option>' +
-          tutors
-            .map((t) => `<option value="${t._id}">${t.name}</option>`)
-            .join("");
-        const studentSel = document.getElementById("crStudent");
+          tutors.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
+
+        const studentSel = document.getElementById('crStudent');
         studentSel.innerHTML =
           '<option value="">Select Student</option>' +
-          students
-            .map((s) => `<option value="${s._id}">${s.name}</option>`)
-            .join("");
-        const classSel = document.getElementById("crClass");
-        classSel.innerHTML = [
-          "Nursery",
-          ...Array.from({ length: 12 }, (_, i) => `Year ${i + 1}`),
-        ]
-          .map((c) => `<option>${c}</option>`)
-          .join("");
+          students.map(s => `<option value="${s._id}">${s.name}</option>`).join('');
+
+        const classSel = document.getElementById('crClass');
+        classSel.innerHTML = ['Nursery', ...Array.from({ length: 12 }, (_, i) => `Year ${i + 1}`)]
+          .map(c => `<option>${c}</option>`).join('');
       }
 
       function getRate(classLevel, subject) {
-        if (subject && String(subject).toLowerCase().trim() === "igbo")
-          return 4000;
-
-        const lvl = (classLevel || "").toLowerCase().trim();
-        if (lvl === "nursery" || /\byear\s*(?:[1-6])\b/i.test(lvl)) return 3800;
+        if (subject && String(subject).toLowerCase().trim() === 'igbo') return 4000;
+        const lvl = (classLevel || '').toLowerCase().trim();
+        if (lvl === 'nursery' || /\byear\s*(?:[1-6])\b/i.test(lvl)) return 3800;
         if (/\byear\s*(?:7|8|9|10)\b/i.test(lvl)) return 4300;
         if (/\byear\s*(?:11|12)\b/i.test(lvl)) return 5000;
         return 0;
       }
 
       function recalc() {
-        const classLevel = document.getElementById("crClass").value;
+        const classLevel = document.getElementById('crClass').value;
         const rate = getRate(classLevel);
-        const start = document.getElementById("crStart").value; // This is correct
-        const end = document.getElementById("crEnd").value; // This is correct
+        const start = document.getElementById('crStart').value;
+        const end = document.getElementById('crEnd').value;
         let amount = 0;
         if (start && end) {
           const s = new Date(start);
@@ -116,191 +106,157 @@
             amount = Math.round(rate * hours);
           }
         }
-        document.getElementById(
-          "crPayment"
-        ).textContent = `₦${amount.toLocaleString()}`;
-        document.getElementById("crRate").textContent = rate
-          ? `(₦${rate.toLocaleString()} / hr)`
-          : "";
+        document.getElementById('crPayment').textContent = `₦${amount.toLocaleString()}`;
+        document.getElementById('crRate').textContent = rate ? `(₦${rate.toLocaleString()} / hr)` : '';
       }
+
       function checkLateSubmission() {
-        const startTime = document.getElementById("crStart").value;
-        const isLate =
-          dayjs(startTime).format("YYYY-MM-DD") !==
-          dayjs().format("YYYY-MM-DD");
-        document.getElementById("lateSubmissionForm").style.display = isLate
-          ? "block"
-          : "none";
+        const startTime = document.getElementById('crStart').value;
+        const isLate = dayjs(startTime).format('YYYY-MM-DD') !== dayjs().format('YYYY-MM-DD');
+        document.getElementById('lateSubmissionForm').style.display = isLate ? 'block' : 'none';
       }
-      document
-        .getElementById("crStart")
-        .addEventListener("change", checkLateSubmission);
-      document.addEventListener("change", (e) => {
-        if (["crClass", "crStart", "crEnd"].includes(e.target.id)) recalc();
+
+      document.getElementById('crStart').addEventListener('change', checkLateSubmission);
+      document.addEventListener('change', e => {
+        if (['crClass', 'crStart', 'crEnd'].includes(e.target.id)) recalc();
       });
-      document.addEventListener("input", (e) => {
-        if (["crStart", "crEnd"].includes(e.target.id)) recalc();
+      document.addEventListener('input', e => {
+        if (['crStart', 'crEnd'].includes(e.target.id)) recalc();
       });
-      document.addEventListener("change", async (e) => {
-        if (e.target && e.target.id === "crTutor") {
-          const tutorId = document.getElementById("crTutor").value;
-          const subjectSel = document.getElementById("crSubject");
-          if (!tutorId) {
-            subjectSel.innerHTML = "";
-            return;
-          }
-          const tutors = await fetch(api("/tutors")).then((r) => r.json());
-          const tutor = tutors.find((t) => t._id === tutorId);
+      document.addEventListener('change', async e => {
+        if (e.target && e.target.id === 'crTutor') {
+          const tutorId = document.getElementById('crTutor').value;
+          const subjectSel = document.getElementById('crSubject');
+          if (!tutorId) { subjectSel.innerHTML = ''; return; }
+          const tutors = await fetch(api('/tutors')).then(r => r.json());
+          const tutor = tutors.find(t => t._id === tutorId);
           subjectSel.innerHTML = tutor
-            ? tutor.subjects.map((s) => `<option>${s}</option>`).join("")
-            : "";
+            ? tutor.subjects.map(s => `<option>${s}</option>`).join('')
+            : '';
         }
       });
-      function showToast(msg, type = "success", timeout = 5000) {
-        const t = document.getElementById("toast");
+
+      function showToast(msg, type = 'success', timeout = 5000) {
+        const t = document.getElementById('toast');
         if (!t) return;
         t.textContent = msg;
         t.className = `toast ${type} show`;
         clearTimeout(t._hideTimer);
-        if (timeout > 0)
-          t._hideTimer = setTimeout(() => t.classList.remove("show"), timeout);
+        if (timeout > 0) t._hideTimer = setTimeout(() => t.classList.remove('show'), timeout);
       }
 
       function setSubmitState(disabled, text) {
-        const btn = document.getElementById("crSubmit");
+        const btn = document.getElementById('crSubmit');
         if (!btn) return;
         btn.disabled = !!disabled;
         if (disabled) {
-          btn.setAttribute("aria-busy", "true");
+          btn.setAttribute('aria-busy', 'true');
           btn.dataset.origText = btn.textContent;
           if (text) btn.textContent = text;
         } else {
-          btn.removeAttribute("aria-busy");
+          btn.removeAttribute('aria-busy');
           btn.textContent = btn.dataset.origText || btn.textContent;
         }
       }
 
-      document.addEventListener("DOMContentLoaded", () => {
-        const btn = document.getElementById("crSubmit");
-        if (btn)
-          btn.addEventListener("click", (e) => {
-            e.preventDefault();
-            createClassRecord();
-          });
+      document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('crSubmit');
+        if (btn) btn.addEventListener('click', e => { e.preventDefault(); createClassRecord(); });
       });
+
       async function createClassRecord() {
-        const btn = document.getElementById("crSubmit");
-        if (btn && btn.disabled) return; // guard against double submit
-        setSubmitState(true, "Submitting...");
+        const btn = document.getElementById('crSubmit');
+        if (btn && btn.disabled) return;
+        setSubmitState(true, 'Submitting...');
+        document.getElementById('crMsg').textContent = '';
 
-        // clear previous messages
-        document.getElementById("crMsg").textContent = "";
-
-        const start = document.getElementById("crStart").value;
-        const end = document.getElementById("crEnd").value;
+        const start = document.getElementById('crStart').value;
+        const end = document.getElementById('crEnd').value;
         const s = new Date(start);
         const e = new Date(end);
 
-        // basic date validation
         if (isNaN(s.getTime()) || isNaN(e.getTime()) || e <= s) {
-          const msg = "Invalid start/end times.";
-          document.getElementById("crMsg").textContent = msg;
-          showToast(msg, "error");
+          const msg = 'Invalid start/end times.';
+          document.getElementById('crMsg').textContent = msg;
+          showToast(msg, 'error');
           setSubmitState(false);
           return;
         }
 
-        const classLevel = document.getElementById("crClass").value;
+        const classLevel = document.getElementById('crClass').value;
         const rate = getRate(classLevel);
-        const subject = document.getElementById("crSubject").value;
-
+        const subject = document.getElementById('crSubject').value;
         const startTime = start;
         const endTime = end;
         const minutes = (e.getTime() - s.getTime()) / 60000;
         const hours = minutes / 60;
         const amount = Math.round(rate * hours);
 
-        // ✅ Duration validation — only allow 30 min, 1 hr, 1 hr 30 min, or 2 hrs
         const allowedDurations = [30, 60, 90, 120];
         if (!allowedDurations.includes(minutes)) {
-          const msg =
-            "Invalid class duration. Allowed durations are 30 min, 1 hr, 1 hr 30 min, or 2 hrs.";
-          document.getElementById("crMsg").textContent = msg;
-          showToast(msg, "error");
+          const msg = 'Invalid class duration. Allowed durations are 30 min, 1 hr, 1 hr 30 min, or 2 hrs.';
+          document.getElementById('crMsg').textContent = msg;
+          showToast(msg, 'error');
           setSubmitState(false);
           return;
         }
 
-        const isLate =
-          dayjs(startTime).format("YYYY-MM-DD") !==
-          dayjs().format("YYYY-MM-DD");
+        const isLate = dayjs(startTime).format('YYYY-MM-DD') !== dayjs().format('YYYY-MM-DD');
 
-        // ✅ Build payload
         const payload = {
-          tutorId: document.getElementById("crTutor").value,
-          studentId: document.getElementById("crStudent").value,
+          tutorId: document.getElementById('crTutor').value,
+          studentId: document.getElementById('crStudent').value,
           classLevel,
-          subject: document.getElementById("crSubject").value,
-          topic: document.getElementById("crTopic").value,
+          subject: document.getElementById('crSubject').value,
+          topic: document.getElementById('crTopic').value,
           startTime,
           endTime,
           paymentAmount: amount,
-          comment: document.getElementById("crComment").value,
-          status: isLate ? "Pending Approval" : "Valid",
+          comment: document.getElementById('crComment').value,
+          status: isLate ? 'Pending Approval' : 'Valid',
         };
 
-        // ✅ Handle late submissions
         if (isLate) {
-          const reason = document.getElementById("crLateReason").value;
+          const reason = document.getElementById('crLateReason').value;
           if (!reason) {
-            const msg = "Please provide a reason for late submission.";
-            document.getElementById("crMsg").textContent = msg;
-            showToast(msg, "error");
+            const msg = 'Please provide a reason for late submission.';
+            document.getElementById('crMsg').textContent = msg;
+            showToast(msg, 'error');
             setSubmitState(false);
             return;
           }
           payload.reason = reason;
         }
 
-        // ✅ Pick correct endpoint
-        const endpoint = isLate
-          ? "/class-records/late-submission"
-          : "/class-records";
+        const endpoint = isLate ? '/class-records/late-submission' : '/class-records';
 
         try {
           const res = await fetch(api(endpoint), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
           });
-
           const out = await res.json().catch(() => ({}));
           if (res.ok) {
-            const id = out.recordId || out._id || "N/A";
+            const id = out.recordId || out._id || 'N/A';
             const successMsg = isLate
               ? `Record submitted for approval. Record ID: ${id}.`
               : `Record submitted successfully! Record ID: ${id}.`;
-            document.getElementById("crMsg").textContent = successMsg;
-            showToast(successMsg, "success");
-
-            // show updated payment immediately
-            document.getElementById(
-              "crPayment"
-            ).textContent = `₦${amount.toLocaleString()}`;
-
-            // keep submit button disabled briefly to indicate completed state
-            setSubmitState(true, "Submitted");
+            document.getElementById('crMsg').textContent = successMsg;
+            showToast(successMsg, 'success');
+            document.getElementById('crPayment').textContent = `₦${amount.toLocaleString()}`;
+            setSubmitState(true, 'Submitted');
             setTimeout(() => setSubmitState(false), 3000);
           } else {
-            const msg = out.message || "Submission failed.";
-            document.getElementById("crMsg").textContent = msg;
-            showToast(msg, "error");
+            const msg = out.message || 'Submission failed.';
+            document.getElementById('crMsg').textContent = msg;
+            showToast(msg, 'error');
             setSubmitState(false);
           }
         } catch (error) {
-          const msg = "Network error. Please try again.";
-          document.getElementById("crMsg").textContent = msg;
-          showToast(msg, "error");
+          const msg = 'Network error. Please try again.';
+          document.getElementById('crMsg').textContent = msg;
+          showToast(msg, 'error');
           console.error(error);
           setSubmitState(false);
         }

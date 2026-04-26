@@ -47,27 +47,44 @@
     </div>
 
     <script>
-      const api = (path) => `${location.origin}/api${path}`;
-      function getSelectedValues(select) { return Array.from(select.selectedOptions).map(o=>o.value); }
+      const API_BASE = window.location.hostname === 'localhost'
+        ? 'http://localhost:3000'
+        : 'https://dvs-system.onrender.com';
+
+      const api = (path) => `${API_BASE}/api${path}`;
+
+      function getSelectedValues(select) {
+        return Array.from(select.selectedOptions).map(o => o.value);
+      }
+
       function loadClassOptions() {
         const classSel = document.getElementById('studentClass');
-        classSel.innerHTML = ['Nursery', ...Array.from({length:12},(_,i)=>`Year ${i+1}`)].map(c=>`<option>${c}</option>`).join('');
+        classSel.innerHTML = ['Nursery', ...Array.from({ length: 12 }, (_, i) => `Year ${i + 1}`)]
+          .map(c => `<option>${c}</option>`).join('');
       }
+
       async function registerStudent() {
         const name = document.getElementById('studentName').value.trim();
         const classLevel = document.getElementById('studentClass').value;
         const enrolledSubjects = getSelectedValues(document.getElementById('studentSubjects'));
-        const res = await fetch(api('/students'), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, classLevel, enrolledSubjects }) });
+        const res = await fetch(api('/students'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, classLevel, enrolledSubjects })
+        });
         const out = await res.json();
         document.getElementById('studentMsg').textContent = res.ok ? 'Student registered' : out.message;
         if (res.ok && enrolledSubjects.length) {
-          const tutors = await fetch(api('/students/suggest-tutors'), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ subjects: enrolledSubjects }) }).then(r=>r.json());
-          document.getElementById('studentMsg').textContent += ` | Suggested Tutors: ${tutors.map(t=>t.name).join(', ')}`;
+          const tutors = await fetch(api('/students/suggest-tutors'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subjects: enrolledSubjects })
+          }).then(r => r.json());
+          document.getElementById('studentMsg').textContent += ` | Suggested Tutors: ${tutors.map(t => t.name).join(', ')}`;
         }
       }
+
       loadClassOptions();
     </script>
   </body>
-  </html>
-
-
+</html>

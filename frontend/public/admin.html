@@ -9,24 +9,22 @@
   <body>
     <script>
       (async function gate() {
-        const saved = localStorage.getItem("adminPass") || "";
-        if (!saved) {
-          window.location.replace("/admin-login.html");
-          return;
-        }
-        // Validate password with a lightweight protected call
+        const API_BASE = window.location.hostname === 'localhost'
+          ? 'http://localhost:3000'
+          : 'https://dvs-system.onrender.com';
+        const saved = localStorage.getItem('adminPass') || '';
+        if (!saved) { window.location.replace('/admin-login.html'); return; }
         try {
-          const resp = await fetch(`${location.origin}/api/admin/tutors`, {
-            headers: { "x-admin-password": saved },
+          const resp = await fetch(`${API_BASE}/api/admin/tutors`, {
+            headers: { 'x-admin-password': saved },
           });
-          if (!resp.ok) {
-            window.location.replace("/admin-login.html");
-          }
+          if (!resp.ok) window.location.replace('/admin-login.html');
         } catch (e) {
-          // If network error, stay but controls will fail gracefully
+          // network error — stay on page, controls will fail gracefully
         }
       })();
     </script>
+
     <header>
       <div class="container">
         <nav>
@@ -37,6 +35,7 @@
         </nav>
       </div>
     </header>
+
     <div class="container">
       <h1>Admin</h1>
 
@@ -48,9 +47,7 @@
           <label style="flex: 1">To<input type="date" id="adTo" /></label>
         </div>
         <button onclick="downloadCSV()">Download CSV</button>
-        <button onclick="downloadStudentSummaryCSV()" style="margin-left: 8px">
-          Download Student Summary CSV
-        </button>
+        <button onclick="downloadStudentSummaryCSV()" style="margin-left: 8px">Download Student Summary CSV</button>
       </section>
 
       <section>
@@ -69,19 +66,8 @@
 
       <section style="margin-top: 16px">
         <h2>Records</h2>
-        <!-- <div class="row">
-          <button onclick="loadRecords()">Refresh</button>
-          <button onclick="downloadCSV()">Download Displayed CSV</button>
-        </div> -->
         <div class="row" style="margin-top: 16px">
-          <div
-            style="
-              display: flex;
-              gap: 8px;
-              margin-bottom: 10px;
-              flex-wrap: wrap;
-            "
-          >
+          <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
             <label style="flex: 1; min-width: 200px">
               Filter Tutor
               <select id="filterTutor" onchange="loadRecords()">
@@ -98,13 +84,11 @@
               Filter Student
               <select id="filterStudent" onchange="loadRecords()">
                 <option value="">All Students</option>
-              </select> </label
-            ><br />
+              </select>
+            </label>
             <button onclick="loadRecords()">Refresh</button>
             <button onclick="downloadRawCSV()">Download Displayed CSV</button>
-            <button onclick="bulkDelete()" class="danger">
-              Delete Selected
-            </button>
+            <button onclick="bulkDelete()" class="danger">Delete Selected</button>
           </div>
         </div>
         <div style="overflow: auto; margin-top: 10px">
@@ -125,13 +109,7 @@
             </colgroup>
             <thead>
               <tr>
-                <th>
-                  <input
-                    type="checkbox"
-                    id="selectAll"
-                    onclick="toggleSelectAll()"
-                  />
-                </th>
+                <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()" /></th>
                 <th>Date</th>
                 <th>Tutor</th>
                 <th>Student</th>
@@ -152,874 +130,441 @@
     </div>
 
     <div id="editModal" class="modal" aria-hidden="true">
-      <div
-        class="modal-content"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="editModalTitle"
-      >
+      <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
         <h3 id="editModalTitle">Edit Class Record</h3>
         <form id="editForm" onsubmit="return false;">
           <input type="hidden" id="editRecordId" />
           <div class="row">
-            <label style="flex: 1"
-              >Tutor
-              <select id="editTutor"></select>
-            </label>
-            <label style="flex: 1"
-              >Student
-              <select id="editStudent"></select>
-            </label>
-          </div>
-
-          <div class="row">
-            <label style="flex: 1"
-              >Class
-              <select id="editClass"></select>
-            </label>
-            <label style="flex: 1"
-              >Subject
-              <select id="editSubject"></select>
-            </label>
-          </div>
-
-          <label
-            >Topic
-            <input id="editTopic" />
-          </label>
-
-          <div class="row">
-            <label style="flex: 1"
-              >Start
-              <input type="datetime-local" id="editStart" />
-            </label>
-            <label style="flex: 1"
-              >End
-              <input type="datetime-local" id="editEnd" />
-            </label>
+            <label style="flex: 1">Tutor <select id="editTutor"></select></label>
+            <label style="flex: 1">Student <select id="editStudent"></select></label>
           </div>
           <div class="row">
-            <label style="flex: 1"
-              >Start
-              <input type="datetime-local" id="editStart" />
-            </label>
-            <label style="flex: 1"
-              >End
-              <input type="datetime-local" id="editEnd" />
-            </label>
+            <label style="flex: 1">Class <select id="editClass"></select></label>
+            <label style="flex: 1">Subject <select id="editSubject"></select></label>
           </div>
-
-          <div class="amount-display">
-            Amount: <span id="editAmount">₦0</span>
+          <label>Topic <input id="editTopic" /></label>
+          <div class="row">
+            <label style="flex: 1">Start <input type="datetime-local" id="editStart" /></label>
+            <label style="flex: 1">End <input type="datetime-local" id="editEnd" /></label>
           </div>
-          <label
-            >Comment
-            <input id="editComment" />
-          </label>
-
+          <div class="amount-display">Amount: <span id="editAmount">₦0</span></div>
+          <label>Comment <input id="editComment" /></label>
           <div style="display: flex; gap: 8px; margin-top: 12px">
             <button type="button" onclick="saveEdit()">Save</button>
-            <button type="button" onclick="closeEditModal()" class="muted">
-              Cancel
-            </button>
+            <button type="button" onclick="closeEditModal()" class="muted">Cancel</button>
           </div>
-
           <div id="editMsg" class="muted"></div>
         </form>
       </div>
     </div>
 
     <script>
-      const api = (path) => `${location.origin}/api${path}`;
-      const getPass = () => localStorage.getItem("adminPass") || "";
-      async function loadTutors() {
-        const tutorId = document.getElementById("filterTutor").value;
-        const classLevel = document.getElementById("filterClass").value;
-        const studentId = document.getElementById("filterStudent").value;
-        const from = document.getElementById("adFrom").value;
-        const to = document.getElementById("adTo").value;
+      const API_BASE = window.location.hostname === 'localhost'
+        ? 'http://localhost:3000'
+        : 'https://dvs-system.onrender.com';
 
-        const subject = document.getElementById("crSubject").value;
-        const rate = getRate(classLevel, subject);
-
-        const params = new URLSearchParams();
-        if (tutorId) params.set("tutorId", tutorId);
-        if (classLevel) params.set("classLevel", classLevel);
-        if (studentId) params.set("studentId", studentId);
-        if (from) params.set("from", from);
-        if (to) params.set("to", to);
-
-        const resp = await fetch(api(`/class-records?${params.toString()}`));
-        const tutorsResp = await fetch(api("/admin/tutors"), {
-          headers: { "x-admin-password": getPass() },
-        });
-        if (!tutorsResp.ok) {
-          document.getElementById("adTutor").innerHTML = "";
-          return;
-        }
-        const tutors = await tutorsResp.json();
-        const adTutor = document.getElementById("adTutor");
-        adTutor.innerHTML =
-          '<option value="">All Tutors</option>' +
-          tutors
-            .map((t) => `<option value="${t._id}">${t.name}</option>`)
-            .join("");
-      }
-
-      async function loadFilterOptions() {
-        try {
-          // Load tutors for filter
-          const tutorsResp = await fetch(api("/tutors"));
-          if (tutorsResp.ok) {
-            const tutors = await tutorsResp.json();
-            const filterTutor = document.getElementById("filterTutor");
-            filterTutor.innerHTML =
-              '<option value="">All Tutors</option>' +
-              tutors
-                .map((t) => `<option value="${t._id}">${t.name}</option>`)
-                .join("");
-          }
-
-          // Load students for filter
-          const studentsResp = await fetch(api("/students"));
-          if (studentsResp.ok) {
-            const students = await studentsResp.json();
-            const filterStudent = document.getElementById("filterStudent");
-            filterStudent.innerHTML =
-              '<option value="">All Students</option>' +
-              students
-                .map((s) => `<option value="${s._id}">${s.name}</option>`)
-                .join("");
-          }
-
-          // Populate class levels
-          const filterClass = document.getElementById("filterClass");
-          filterClass.innerHTML =
-            '<option value="">All Classes</option>' +
-            [
-              "Nursery",
-              ...Array.from({ length: 12 }, (_, i) => `Year ${i + 1}`),
-            ]
-              .map((c) => `<option value="${c}">${c}</option>`)
-              .join("");
-        } catch (err) {
-          console.error("Failed to load filter options:", err);
-        }
-      }
-      // async function downloadCSV() {
-      //   const tutorId = document.getElementById('adTutor').value;
-      //   const from = document.getElementById('adFrom').value;
-      //   const to = document.getElementById('adTo').value;
-      //   const url = new URL(api('/admin/export'));
-      //   url.searchParams.set('adminPassword', getPass());
-      //   if (tutorId) url.searchParams.set('tutorId', tutorId);
-      //   if (from) url.searchParams.set('from', from);
-      //   if (to) url.searchParams.set('to', to);
-      //   const a = document.createElement('a');
-      //   a.href = url.toString();
-      //   a.click();
-      // }
-      // function calculateAmount(classLevel, startTime, endTime) {
-      //   const start = new Date(startTime);
-      //   const end = new Date(endTime);
-
-      //   if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
-      //     return 0;
-      //   }
-
-      //   const rate = getRateLocal(classLevel);
-      //   const minutes = (end.getTime() - start.getTime()) / 60000;
-      //   const hours = minutes / 60;
-      //   return Math.round(rate * hours);
-      // }
-      function calculateAmount(classLevel, subject, startTime, endTime) {
-        const start = new Date(startTime);
-        const end = new Date(endTime);
-
-        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
-          return 0;
-        }
-
-        const rate = getRateLocal(classLevel, subject);
-        const minutes = (end.getTime() - start.getTime()) / 60000;
-        const hours = minutes / 60;
-        return Math.round(rate * hours);
-      }
-      async function downloadCSV() {
-        const tutorId = document.getElementById("adTutor").value;
-        const from = document.getElementById("adFrom").value;
-        const to = document.getElementById("adTo").value;
-        const url = new URL(api("/admin/export"));
-        if (tutorId) url.searchParams.set("tutorId", tutorId);
-        if (from) url.searchParams.set("from", from);
-        if (to) url.searchParams.set("to", to);
-
-        const res = await fetch(url.toString(), {
-          headers: { "x-admin-password": getPass() },
-        });
-        if (!res.ok) {
-          document.getElementById("adminMsg").textContent = "Export failed";
-          return;
-        }
-        const blob = await res.blob();
-        const filename = `records${from ? "-" + from : ""}${
-          to ? "-" + to : ""
-        }.csv`;
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(a.href);
-      }
-      async function downloadRawCSV() {
-        const tutorId = document.getElementById("adTutor")?.value;
-        const from = document.getElementById("adFrom")?.value;
-        const to = document.getElementById("adTo")?.value;
-        const params = new URLSearchParams();
-        if (tutorId) params.set("tutorId", tutorId);
-        if (from) params.set("from", from);
-        if (to) params.set("to", to);
-
-        const url = api(`/admin/export-raw?${params.toString()}`);
-        try {
-          const res = await fetch(url, {
-            headers: { "x-admin-password": getPass() },
-          });
-          if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            document.getElementById("adminMsg").textContent =
-              body.message || `Error ${res.status}`;
-            return;
-          }
-          const blob = await res.blob();
-          const cd = res.headers.get("Content-Disposition") || "";
-          const match = cd.match(/filename="?([^"]+)"?/);
-          const filename = match ? match[1] : "records-raw.csv";
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = filename;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          URL.revokeObjectURL(link.href);
-        } catch (err) {
-          console.error(err);
-          document.getElementById("adminMsg").textContent = "Network error";
-        }
-      }
-
-      async function downloadAggregatedCSV() {
-        const tutorId = document.getElementById("adTutor")?.value;
-        const from = document.getElementById("adFrom")?.value;
-        const to = document.getElementById("adTo")?.value;
-        const params = new URLSearchParams();
-        if (tutorId) params.set("tutorId", tutorId);
-        if (from) params.set("from", from);
-        if (to) params.set("to", to);
-
-        const url = api(`/admin/export-aggregated?${params.toString()}`);
-        try {
-          const res = await fetch(url, {
-            headers: { "x-admin-password": getPass() },
-          });
-          if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            document.getElementById("adminMsg").textContent =
-              body.message || `Error ${res.status}`;
-            return;
-          }
-          const blob = await res.blob();
-          const cd = res.headers.get("Content-Disposition") || "";
-          const match = cd.match(/filename="?([^"]+)"?/);
-          const filename = match ? match[1] : "records-summary.csv";
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = filename;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          URL.revokeObjectURL(link.href);
-        } catch (err) {
-          console.error(err);
-          document.getElementById("adminMsg").textContent = "Network error";
-        }
-      }
-      async function downloadStudentSummaryCSV() {
-        const tutorId = document.getElementById("adTutor").value;
-        const from = document.getElementById("adFrom").value;
-        const to = document.getElementById("adTo").value;
-        const url = new URL(api("/admin/export-student-summary"));
-        if (tutorId) url.searchParams.set("tutorId", tutorId);
-        if (from) url.searchParams.set("from", from);
-        if (to) url.searchParams.set("to", to);
-
-        const res = await fetch(url.toString(), {
-          headers: { "x-admin-password": getPass() },
-        });
-        if (!res.ok) {
-          document.getElementById("adminMsg").textContent = "Export failed";
-          return;
-        }
-        const blob = await res.blob();
-        const filename = `student-summary${from ? "-" + from : ""}${
-          to ? "-" + to : ""
-        }.csv`;
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(a.href);
-      }
-      async function approveLate() {
-        const recordId = document.getElementById("lateRecordId").value.trim();
-        const adminName = document.getElementById("lateAdminName").value.trim();
-        const notes = document.getElementById("lateNotes").value.trim();
-        const res = await fetch(api(`/admin/late-approve/${recordId}`), {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-password": getPass(),
-          },
-          body: JSON.stringify({ adminName, notes }),
-        });
-        const out = await res.json();
-        document.getElementById("adminMsg").textContent = res.ok
-          ? "Late approved"
-          : out.message;
-      }
-      //   async function loadRecords() {
-      //     const tutorId = document.getElementById("adTutor").value;
-      //     const from = document.getElementById("adFrom").value;
-      //     const to = document.getElementById("adTo").value;
-      //     const params = new URLSearchParams();
-      //     if (tutorId) params.set("tutorId", tutorId);
-      //     if (from) params.set("from", from);
-      //     if (to) params.set("to", to);
-      //     const resp = await fetch(api(`/class-records?${params.toString()}`));
-      //     if (!resp.ok) return;
-      //     const rows = await resp.json();
-      //     const tbody = document.querySelector("#recordsTable tbody");
-
-      //     // small helper to truncate display but keep full value on hover
-      //     const tr = (s, n = 40) =>
-      //       s && s.length > n ? s.slice(0, n - 1) + "…" : s || "";
-
-      //     tbody.innerHTML = rows
-      //       .map((r) => {
-      //         const date = new Date(r.dateSubmitted || r.startTime);
-      //         const dateDisplay = isNaN(date.getTime())
-      //           ? ""
-      //           : date.toLocaleDateString();
-      //         const startDisplay = r.startTime
-      //           ? new Date(r.startTime).toLocaleString()
-      //           : "";
-      //         const endDisplay = r.endTime
-      //           ? new Date(r.endTime).toLocaleString()
-      //           : "";
-      //         return `
-      //   <tr data-id="${r._id}">
-      //     <td class="col-checkbox"><input type="checkbox" class="record-select" value="${
-      //       r._id
-      //     }"></td>
-      //     <td class="col-date" title="${dateDisplay}">${dateDisplay}</td>
-      //     <td class="col-tutor" title="${r.tutorId?.name || ""}">${tr(
-      //           r.tutorId?.name,
-      //           20
-      //         )}</td>
-      //     <td class="col-student" title="${r.studentId?.name || ""}">${tr(
-      //           r.studentId?.name,
-      //           20
-      //         )}</td>
-      //     <td class="col-class" title="${r.classLevel || ""}">${
-      //           r.classLevel || ""
-      //         }</td>
-      //     <td class="col-subject" title="${r.subject || ""}">${tr(
-      //           r.subject,
-      //           24
-      //         )}</td>
-      //     <td class="col-topic" title="${r.topic || ""}">${tr(r.topic, 36)}</td>
-      //     <td class="col-start" title="${startDisplay}">${tr(
-      //           startDisplay,
-      //           20
-      //         )}</td>
-      //     <td class="col-end" title="${endDisplay}">${tr(endDisplay, 20)}</td>
-      //     <td class="col-amount" title="${(
-      //       r.paymentAmount || 0
-      //     ).toLocaleString()}">₦${(r.paymentAmount || 0).toLocaleString()}</td>
-      //     <td class="col-status" title="${r.status || ""}">${r.status || ""}</td>
-      //     <td class="col-actions">
-      //       <button onclick="editRecord('${r._id}')" class="small">Edit</button>
-      //       <button onclick="deleteRecord('${
-      //         r._id
-      //       }')" class="small danger">Delete</button>
-      //     </td>
-      //   </tr>
-      // `;
-      //       })
-      //       .join("");
-      //   }
-
-      async function loadRecords() {
-        try {
-          const tutorId = document.getElementById("filterTutor")?.value;
-          const classLevel = document.getElementById("filterClass")?.value;
-          const studentId = document.getElementById("filterStudent")?.value;
-          const from = document.getElementById("adFrom")?.value;
-          const to = document.getElementById("adTo")?.value;
-
-          const params = new URLSearchParams();
-          if (tutorId) params.set("tutorId", tutorId);
-          if (classLevel) params.set("classLevel", classLevel);
-          if (studentId) params.set("studentId", studentId);
-          if (from) params.set("from", from);
-          if (to) params.set("to", to);
-
-          console.log(
-            "Fetching records with filters:",
-            Object.fromEntries(params)
-          );
-
-          const resp = await fetch(api(`/class-records?${params.toString()}`));
-          if (!resp.ok) {
-            console.error("Failed to load records:", resp.status);
-            return;
-          }
-
-          const records = await resp.json();
-          console.log("Loaded records:", records.length);
-
-          const tbody = document.querySelector("#recordsTable tbody");
-          tbody.innerHTML = records
-            .map(
-              (r) => `
-        <tr data-id="${r._id}">
-          <td><input type="checkbox" class="record-select" value="${
-            r._id
-          }"></td>
-          <td>${new Date(
-            r.dateSubmitted || r.startTime
-          ).toLocaleDateString()}</td>
-          <td>${r.tutorId?.name || ""}</td>
-          <td>${r.studentId?.name || ""}</td>
-          <td>${r.classLevel || ""}</td>
-          <td>${r.subject || ""}</td>
-          <td>${r.topic || ""}</td>
-          <td>${new Date(r.startTime).toLocaleString()}</td>
-          <td>${new Date(r.endTime).toLocaleString()}</td>
-          <td>₦${(r.paymentAmount || 0).toLocaleString()}</td>
-          <td>${r.status || ""}</td>
-          <td>
-            <button onclick="editRecord('${r._id}')" class="small">Edit</button>
-            <button onclick="deleteRecord('${
-              r._id
-            }')" class="small danger">Delete</button>
-          </td>
-        </tr>
-      `
-            )
-            .join("");
-        } catch (err) {
-          console.error("Error loading records:", err);
-          document.getElementById("adminMsg").textContent =
-            "Failed to load records";
-        }
-      }
-      function toggleSelectAll() {
-        const selectAll = document.getElementById("selectAll");
-        const checkboxes = document.querySelectorAll(".record-select");
-        checkboxes.forEach(
-          (checkbox) => (checkbox.checked = selectAll.checked)
-        );
-      }
-
-      async function bulkDelete() {
-        const selected = Array.from(
-          document.querySelectorAll(".record-select:checked")
-        ).map((checkbox) => checkbox.value);
-
-        if (!selected.length) {
-          document.getElementById("adminMsg").textContent =
-            "No records selected";
-          return;
-        }
-
-        if (!confirm(`Delete ${selected.length} selected records?`)) return;
-
-        try {
-          const res = await fetch(api("/class-records/bulk-delete"), {
-            method: "DELETE",
-            headers: {
-              "Content-Type": "application/json",
-              "x-admin-password": getPass(),
-            },
-            body: JSON.stringify({ ids: selected }),
-          });
-
-          if (res.ok) {
-            document.getElementById("adminMsg").textContent =
-              "Records deleted successfully";
-            loadRecords();
-          } else {
-            const data = await res.json();
-            document.getElementById("adminMsg").textContent =
-              data.message || "Delete failed";
-          }
-        } catch (err) {
-          document.getElementById("adminMsg").textContent = "Network error";
-        }
-      }
-
-      async function bulkDelete() {
-        const selected = Array.from(
-          document.querySelectorAll(".record-select:checked")
-        ).map((checkbox) => checkbox.value);
-
-        if (!selected.length) {
-          document.getElementById("adminMsg").textContent =
-            "No records selected";
-          return;
-        }
-
-        if (!confirm(`Delete ${selected.length} selected records?`)) return;
-
-        try {
-          const res = await fetch(api("/class-records/bulk-delete"), {
-            method: "DELETE",
-            headers: {
-              "Content-Type": "application/json",
-              "x-admin-password": getPass(),
-            },
-            body: JSON.stringify({ ids: selected }),
-          });
-
-          if (res.ok) {
-            document.getElementById("adminMsg").textContent =
-              "Records deleted successfully";
-            loadRecords();
-          } else {
-            const data = await res.json();
-            document.getElementById("adminMsg").textContent =
-              data.message || "Delete failed";
-          }
-        } catch (err) {
-          document.getElementById("adminMsg").textContent = "Network error";
-        }
-      }
-
-      async function deleteRecord(id) {
-        if (!confirm("Delete this record?")) return;
-
-        try {
-          const res = await fetch(api(`/class-records/${id}`), {
-            method: "DELETE",
-            headers: { "x-admin-password": getPass() },
-          });
-
-          if (res.ok) {
-            document.getElementById("adminMsg").textContent = "Record deleted";
-            loadRecords();
-          } else {
-            const data = await res.json();
-            document.getElementById("adminMsg").textContent =
-              data.message || "Delete failed";
-          }
-        } catch (err) {
-          document.getElementById("adminMsg").textContent = "Network error";
-        }
-      }
-      function showEditModal() {
-        const m = document.getElementById("editModal");
-        m.style.display = "flex";
-        m.setAttribute("aria-hidden", "false");
-      }
-
-      function closeEditModal() {
-        const m = document.getElementById("editModal");
-        m.style.display = "none";
-        m.setAttribute("aria-hidden", "true");
-        document.getElementById("editMsg").textContent = "";
-      }
-
-      function toDatetimeLocalValue(iso) {
-        if (!iso) return "";
-        const d = new Date(iso);
-        const pad = (n) => String(n).padStart(2, "0");
-        const yyyy = d.getFullYear();
-        const mm = pad(d.getMonth() + 1);
-        const dd = pad(d.getDate());
-        const hh = pad(d.getHours());
-        const mi = pad(d.getMinutes());
-        return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
-      }
-
-      // const classLevel = document.getElementById("crClass").value;
-      // const subject = document.getElementById("crSubject").value;
+      const api = (path) => `${API_BASE}/api${path}`;
+      const getPass = () => localStorage.getItem('adminPass') || '';
 
       function getRateLocal(classLevel, subject) {
-        if (subject && String(subject).toLowerCase().trim() === "igbo")
-          return 4000;
-        const level = (classLevel || "").toLowerCase().trim();
-        if (level === "nursery" || /\byear\s*(?:[1-6])\b/i.test(level))
-          return 3800;
+        if (subject && String(subject).toLowerCase().trim() === 'igbo') return 4000;
+        const level = (classLevel || '').toLowerCase().trim();
+        if (level === 'nursery' || /\byear\s*(?:[1-6])\b/i.test(level)) return 3800;
         if (/\byear\s*(?:7|8|9|10)\b/i.test(level)) return 4300;
         if (/\byear\s*(?:11|12)\b/i.test(level)) return 5000;
         return 0;
       }
 
-      async function openEditModal(recordId) {
-        document.getElementById("editMsg").textContent = "";
-        document.getElementById("editRecordId").value = recordId;
+      function calculateAmount(classLevel, subject, startTime, endTime) {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return 0;
+        const rate = getRateLocal(classLevel, subject);
+        const minutes = (end.getTime() - start.getTime()) / 60000;
+        return Math.round(rate * (minutes / 60));
+      }
 
-        // load tutors & students (for selects)
+      async function loadTutors() {
+        const tutorsResp = await fetch(api('/admin/tutors'), {
+          headers: { 'x-admin-password': getPass() },
+        });
+        if (!tutorsResp.ok) { document.getElementById('adTutor').innerHTML = ''; return; }
+        const tutors = await tutorsResp.json();
+        const adTutor = document.getElementById('adTutor');
+        adTutor.innerHTML =
+          '<option value="">All Tutors</option>' +
+          tutors.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
+      }
+
+      async function loadFilterOptions() {
+        try {
+          const tutorsResp = await fetch(api('/tutors'));
+          if (tutorsResp.ok) {
+            const tutors = await tutorsResp.json();
+            const filterTutor = document.getElementById('filterTutor');
+            filterTutor.innerHTML =
+              '<option value="">All Tutors</option>' +
+              tutors.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
+          }
+          const studentsResp = await fetch(api('/students'));
+          if (studentsResp.ok) {
+            const students = await studentsResp.json();
+            const filterStudent = document.getElementById('filterStudent');
+            filterStudent.innerHTML =
+              '<option value="">All Students</option>' +
+              students.map(s => `<option value="${s._id}">${s.name}</option>`).join('');
+          }
+          const filterClass = document.getElementById('filterClass');
+          filterClass.innerHTML =
+            '<option value="">All Classes</option>' +
+            ['Nursery', ...Array.from({ length: 12 }, (_, i) => `Year ${i + 1}`)]
+              .map(c => `<option value="${c}">${c}</option>`).join('');
+        } catch (err) {
+          console.error('Failed to load filter options:', err);
+        }
+      }
+
+      async function downloadCSV() {
+        const tutorId = document.getElementById('adTutor').value;
+        const from = document.getElementById('adFrom').value;
+        const to = document.getElementById('adTo').value;
+        const url = new URL(api('/admin/export'));
+        if (tutorId) url.searchParams.set('tutorId', tutorId);
+        if (from) url.searchParams.set('from', from);
+        if (to) url.searchParams.set('to', to);
+        const res = await fetch(url.toString(), { headers: { 'x-admin-password': getPass() } });
+        if (!res.ok) { document.getElementById('adminMsg').textContent = 'Export failed'; return; }
+        const blob = await res.blob();
+        const filename = `records${from ? '-' + from : ''}${to ? '-' + to : ''}.csv`;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+      }
+
+      async function downloadRawCSV() {
+        const tutorId = document.getElementById('adTutor')?.value;
+        const from = document.getElementById('adFrom')?.value;
+        const to = document.getElementById('adTo')?.value;
+        const params = new URLSearchParams();
+        if (tutorId) params.set('tutorId', tutorId);
+        if (from) params.set('from', from);
+        if (to) params.set('to', to);
+        try {
+          const res = await fetch(api(`/admin/export-raw?${params.toString()}`), {
+            headers: { 'x-admin-password': getPass() },
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            document.getElementById('adminMsg').textContent = body.message || `Error ${res.status}`;
+            return;
+          }
+          const blob = await res.blob();
+          const cd = res.headers.get('Content-Disposition') || '';
+          const match = cd.match(/filename="?([^"]+)"?/);
+          const filename = match ? match[1] : 'records-raw.csv';
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(link.href);
+        } catch (err) {
+          console.error(err);
+          document.getElementById('adminMsg').textContent = 'Network error';
+        }
+      }
+
+      async function downloadStudentSummaryCSV() {
+        const tutorId = document.getElementById('adTutor').value;
+        const from = document.getElementById('adFrom').value;
+        const to = document.getElementById('adTo').value;
+        const url = new URL(api('/admin/export-student-summary'));
+        if (tutorId) url.searchParams.set('tutorId', tutorId);
+        if (from) url.searchParams.set('from', from);
+        if (to) url.searchParams.set('to', to);
+        const res = await fetch(url.toString(), { headers: { 'x-admin-password': getPass() } });
+        if (!res.ok) { document.getElementById('adminMsg').textContent = 'Export failed'; return; }
+        const blob = await res.blob();
+        const filename = `student-summary${from ? '-' + from : ''}${to ? '-' + to : ''}.csv`;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+      }
+
+      async function approveLate() {
+        const recordId = document.getElementById('lateRecordId').value.trim();
+        const adminName = document.getElementById('lateAdminName').value.trim();
+        const notes = document.getElementById('lateNotes').value.trim();
+        const res = await fetch(api(`/admin/late-approve/${recordId}`), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-password': getPass() },
+          body: JSON.stringify({ adminName, notes }),
+        });
+        const out = await res.json();
+        document.getElementById('adminMsg').textContent = res.ok ? 'Late approved' : out.message;
+      }
+
+      async function loadRecords() {
+        try {
+          const tutorId = document.getElementById('filterTutor')?.value;
+          const classLevel = document.getElementById('filterClass')?.value;
+          const studentId = document.getElementById('filterStudent')?.value;
+          const from = document.getElementById('adFrom')?.value;
+          const to = document.getElementById('adTo')?.value;
+          const params = new URLSearchParams();
+          if (tutorId) params.set('tutorId', tutorId);
+          if (classLevel) params.set('classLevel', classLevel);
+          if (studentId) params.set('studentId', studentId);
+          if (from) params.set('from', from);
+          if (to) params.set('to', to);
+          const resp = await fetch(api(`/class-records?${params.toString()}`));
+          if (!resp.ok) { console.error('Failed to load records:', resp.status); return; }
+          const records = await resp.json();
+          const tbody = document.querySelector('#recordsTable tbody');
+          tbody.innerHTML = records.map(r => `
+            <tr data-id="${r._id}">
+              <td><input type="checkbox" class="record-select" value="${r._id}"></td>
+              <td>${new Date(r.dateSubmitted || r.startTime).toLocaleDateString()}</td>
+              <td>${r.tutorId?.name || ''}</td>
+              <td>${r.studentId?.name || ''}</td>
+              <td>${r.classLevel || ''}</td>
+              <td>${r.subject || ''}</td>
+              <td>${r.topic || ''}</td>
+              <td>${new Date(r.startTime).toLocaleString()}</td>
+              <td>${new Date(r.endTime).toLocaleString()}</td>
+              <td>₦${(r.paymentAmount || 0).toLocaleString()}</td>
+              <td>${r.status || ''}</td>
+              <td>
+                <button onclick="editRecord('${r._id}')" class="small">Edit</button>
+                <button onclick="deleteRecord('${r._id}')" class="small danger">Delete</button>
+              </td>
+            </tr>
+          `).join('');
+        } catch (err) {
+          console.error('Error loading records:', err);
+          document.getElementById('adminMsg').textContent = 'Failed to load records';
+        }
+      }
+
+      function toggleSelectAll() {
+        const selectAll = document.getElementById('selectAll');
+        document.querySelectorAll('.record-select').forEach(cb => cb.checked = selectAll.checked);
+      }
+
+      async function bulkDelete() {
+        const selected = Array.from(document.querySelectorAll('.record-select:checked')).map(cb => cb.value);
+        if (!selected.length) { document.getElementById('adminMsg').textContent = 'No records selected'; return; }
+        if (!confirm(`Delete ${selected.length} selected records?`)) return;
+        try {
+          const res = await fetch(api('/class-records/bulk-delete'), {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'x-admin-password': getPass() },
+            body: JSON.stringify({ ids: selected }),
+          });
+          if (res.ok) {
+            document.getElementById('adminMsg').textContent = 'Records deleted successfully';
+            loadRecords();
+          } else {
+            const data = await res.json();
+            document.getElementById('adminMsg').textContent = data.message || 'Delete failed';
+          }
+        } catch (err) {
+          document.getElementById('adminMsg').textContent = 'Network error';
+        }
+      }
+
+      async function deleteRecord(id) {
+        if (!confirm('Delete this record?')) return;
+        try {
+          const res = await fetch(api(`/class-records/${id}`), {
+            method: 'DELETE',
+            headers: { 'x-admin-password': getPass() },
+          });
+          if (res.ok) {
+            document.getElementById('adminMsg').textContent = 'Record deleted';
+            loadRecords();
+          } else {
+            const data = await res.json();
+            document.getElementById('adminMsg').textContent = data.message || 'Delete failed';
+          }
+        } catch (err) {
+          document.getElementById('adminMsg').textContent = 'Network error';
+        }
+      }
+
+      function showEditModal() {
+        const m = document.getElementById('editModal');
+        m.style.display = 'flex';
+        m.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeEditModal() {
+        const m = document.getElementById('editModal');
+        m.style.display = 'none';
+        m.setAttribute('aria-hidden', 'true');
+        document.getElementById('editMsg').textContent = '';
+      }
+
+      function toDatetimeLocalValue(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+
+      async function openEditModal(recordId) {
+        document.getElementById('editMsg').textContent = '';
+        document.getElementById('editRecordId').value = recordId;
         const [tutorsResp, studentsResp] = await Promise.all([
-          fetch(api("/tutors")),
-          fetch(api("/students")),
+          fetch(api('/tutors')),
+          fetch(api('/students')),
         ]);
         const tutors = tutorsResp.ok ? await tutorsResp.json() : [];
         const students = studentsResp.ok ? await studentsResp.json() : [];
-
-        const editTutor = document.getElementById("editTutor");
+        const editTutor = document.getElementById('editTutor');
         editTutor.innerHTML =
           '<option value="">Select Tutor</option>' +
-          tutors
-            .map((t) => `<option value="${t._id}">${t.name}</option>`)
-            .join("");
-
-        const editStudent = document.getElementById("editStudent");
+          tutors.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
+        const editStudent = document.getElementById('editStudent');
         editStudent.innerHTML =
           '<option value="">Select Student</option>' +
-          students
-            .map((s) => `<option value="${s._id}">${s.name}</option>`)
-            .join("");
-
-        // class options
-        const classSel = document.getElementById("editClass");
-        classSel.innerHTML = [
-          "Nursery",
-          ...Array.from({ length: 12 }, (_, i) => `Year ${i + 1}`),
-        ]
-          .map((c) => `<option>${c}</option>`)
-          .join("");
-
-        // fetch the record
+          students.map(s => `<option value="${s._id}">${s.name}</option>`).join('');
+        const classSel = document.getElementById('editClass');
+        classSel.innerHTML = ['Nursery', ...Array.from({ length: 12 }, (_, i) => `Year ${i + 1}`)]
+          .map(c => `<option>${c}</option>`).join('');
         const resp = await fetch(api(`/class-records/${recordId}`));
-        if (!resp.ok) {
-          document.getElementById("adminMsg").textContent =
-            "Failed to load record";
-          return;
-        }
+        if (!resp.ok) { document.getElementById('adminMsg').textContent = 'Failed to load record'; return; }
         const r = await resp.json();
-
-        // populate form
-        editTutor.value = r.tutorId?._id || "";
-        editStudent.value = r.studentId?._id || "";
-        document.getElementById("editClass").value = r.classLevel || "";
-
-        // populate subject options for selected tutor
-        const tutorObj = tutors.find((t) => t._id === (r.tutorId?._id || ""));
-        const editSubject = document.getElementById("editSubject");
+        editTutor.value = r.tutorId?._id || '';
+        editStudent.value = r.studentId?._id || '';
+        document.getElementById('editClass').value = r.classLevel || '';
+        const tutorObj = tutors.find(t => t._id === (r.tutorId?._id || ''));
+        const editSubject = document.getElementById('editSubject');
         editSubject.innerHTML = tutorObj
-          ? tutorObj.subjects.map((s) => `<option>${s}</option>`).join("")
-          : "<option></option>";
-        document.getElementById("editSubject").value = r.subject || "";
-
-        document.getElementById("editTopic").value = r.topic || "";
-        document.getElementById("editStart").value = toDatetimeLocalValue(
-          r.startTime
-        );
-        document.getElementById("editEnd").value = toDatetimeLocalValue(
-          r.endTime
-        );
-        document.getElementById("editComment").value = r.comment || "";
-
-        // update subject options when tutor changes (replace handler to avoid duplicates)
+          ? tutorObj.subjects.map(s => `<option>${s}</option>`).join('')
+          : '<option></option>';
+        editSubject.value = r.subject || '';
+        document.getElementById('editTopic').value = r.topic || '';
+        document.getElementById('editStart').value = toDatetimeLocalValue(r.startTime);
+        document.getElementById('editEnd').value = toDatetimeLocalValue(r.endTime);
+        document.getElementById('editComment').value = r.comment || '';
         editTutor.onchange = () => {
-          const t = tutors.find((x) => x._id === editTutor.value);
-          editSubject.innerHTML = t
-            ? t.subjects.map((s) => `<option>${s}</option>`).join("")
-            : "";
+          const t = tutors.find(x => x._id === editTutor.value);
+          editSubject.innerHTML = t ? t.subjects.map(s => `<option>${s}</option>`).join('') : '';
         };
-
         showEditModal();
       }
 
-      async function editRecord(id) {
-        // open modal instead of redirect
-        openEditModal(id);
-      }
+      async function editRecord(id) { openEditModal(id); }
 
       async function saveEdit() {
-        const id = document.getElementById("editRecordId").value;
-        const tutorId = document.getElementById("editTutor").value;
-        const studentId = document.getElementById("editStudent").value;
-        const classLevel = document.getElementById("editClass").value;
-        const subject = document.getElementById("editSubject").value;
-        const topic = document.getElementById("editTopic").value;
-        const startTime = document.getElementById("editStart").value;
-        const endTime = document.getElementById("editEnd").value;
-        const comment = document.getElementById("editComment").value;
-
-        if (
-          !tutorId ||
-          !studentId ||
-          !classLevel ||
-          !subject ||
-          !topic ||
-          !startTime ||
-          !endTime
-        ) {
-          document.getElementById("editMsg").textContent =
-            "All fields are required";
+        const id = document.getElementById('editRecordId').value;
+        const tutorId = document.getElementById('editTutor').value;
+        const studentId = document.getElementById('editStudent').value;
+        const classLevel = document.getElementById('editClass').value;
+        const subject = document.getElementById('editSubject').value;
+        const topic = document.getElementById('editTopic').value;
+        const startTime = document.getElementById('editStart').value;
+        const endTime = document.getElementById('editEnd').value;
+        const comment = document.getElementById('editComment').value;
+        if (!tutorId || !studentId || !classLevel || !subject || !topic || !startTime || !endTime) {
+          document.getElementById('editMsg').textContent = 'All fields are required';
           return;
         }
-
         const s = new Date(startTime);
         const e = new Date(endTime);
         if (isNaN(s.getTime()) || isNaN(e.getTime()) || e <= s) {
-          document.getElementById("editMsg").textContent =
-            "Invalid start/end times";
+          document.getElementById('editMsg').textContent = 'Invalid start/end times';
           return;
         }
-
         const minutes = (e.getTime() - s.getTime()) / 60000;
-        const allowed = [30, 60, 90, 120];
-        if (!allowed.includes(minutes)) {
-          document.getElementById("editMsg").textContent =
-            "Allowed durations: 30m, 1h, 1.5h, 2h";
+        if (![30, 60, 90, 120].includes(minutes)) {
+          document.getElementById('editMsg').textContent = 'Allowed durations: 30m, 1h, 1.5h, 2h';
           return;
         }
-
-        const rate = getRateLocal(classLevel);
-        // const paymentAmount = Math.round(rate * (minutes / 60));
-        const paymentAmount = calculateAmount(classLevel, startTime, endTime);
-
+        const paymentAmount = calculateAmount(classLevel, subject, startTime, endTime);
         try {
           const res = await fetch(api(`/class-records/${id}`), {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              "x-admin-password": getPass(),
-            },
-            body: JSON.stringify({
-              tutorId,
-              studentId,
-              classLevel,
-              subject,
-              topic,
-              startTime,
-              endTime,
-              comment,
-              paymentAmount,
-            }),
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'x-admin-password': getPass() },
+            body: JSON.stringify({ tutorId, studentId, classLevel, subject, topic, startTime, endTime, comment, paymentAmount }),
           });
-
           if (!res.ok) {
             const out = await res.json().catch(() => ({}));
-            document.getElementById("editMsg").textContent =
-              out.message || "Update failed";
+            document.getElementById('editMsg').textContent = out.message || 'Update failed';
             return;
           }
-
           closeEditModal();
-          document.getElementById("adminMsg").textContent = "Record updated";
+          document.getElementById('adminMsg').textContent = 'Record updated';
           loadRecords();
         } catch (err) {
           console.error(err);
-          document.getElementById("editMsg").textContent = "Network error";
+          document.getElementById('editMsg').textContent = 'Network error';
         }
       }
 
-      document.getElementById("editModal").addEventListener("click", (e) => {
-        if (e.target.id === "editModal") closeEditModal();
+      function updateAmount() {
+        const startTime = document.getElementById('editStart').value;
+        const endTime = document.getElementById('editEnd').value;
+        const classLevel = document.getElementById('editClass').value;
+        const subject = document.getElementById('editSubject')?.value || '';
+        const amount = calculateAmount(classLevel, subject, startTime, endTime);
+        document.getElementById('editAmount').textContent = `₦${amount.toLocaleString()}`;
+      }
+
+      document.getElementById('editStart').addEventListener('change', updateAmount);
+      document.getElementById('editEnd').addEventListener('change', updateAmount);
+      document.getElementById('editClass').addEventListener('change', updateAmount);
+      document.getElementById('editModal').addEventListener('click', e => {
+        if (e.target.id === 'editModal') closeEditModal();
       });
+
       async function loadPendingRecords() {
-        const resp = await fetch(api("/class-records/pending"), {
-          headers: { "x-admin-password": getPass() },
+        const resp = await fetch(api('/class-records/pending'), {
+          headers: { 'x-admin-password': getPass() },
         });
         if (!resp.ok) return;
-
         const records = await resp.json();
-        const container = document.getElementById("pendingRecords");
-
-        container.innerHTML =
-          records
-            .map(
-              (record) => `
-    <div class="pending-record">
-      <p>Tutor: ${record.tutorId.name}</p>
-      <p>Student: ${record.studentId.name}</p>
-      <p>Date: ${new Date(record.startTime).toLocaleDateString()}</p>
-      <p>Reason: ${record.approvalRequest.reason}</p>
-      <button onclick="handleApproval('${record._id}', true)">Approve</button>
-      <button onclick="handleApproval('${record._id}', false)">Reject</button>
-    </div>
-  `
-            )
-            .join("") || "<p>No pending approvals</p>";
+        const container = document.getElementById('pendingRecords');
+        container.innerHTML = records.map(record => `
+          <div class="pending-record">
+            <p>Tutor: ${record.tutorId.name}</p>
+            <p>Student: ${record.studentId.name}</p>
+            <p>Date: ${new Date(record.startTime).toLocaleDateString()}</p>
+            <p>Reason: ${record.approvalRequest.reason}</p>
+            <button onclick="handleApproval('${record._id}', true)">Approve</button>
+            <button onclick="handleApproval('${record._id}', false)">Reject</button>
+          </div>
+        `).join('') || '<p>No pending approvals</p>';
       }
-      function updateAmount() {
-        const startTime = document.getElementById("editStart").value;
-        const endTime = document.getElementById("editEnd").value;
-        const classLevel = document.getElementById("editClass").value;
-        const subject = document.getElementById("editSubject")?.value || "";
 
-        const amount = calculateAmount(classLevel, subject, startTime, endTime);
-        document.getElementById(
-          "editAmount"
-        ).textContent = `₦${amount.toLocaleString()}`;
-      }
-      document
-        .getElementById("editStart")
-        .addEventListener("change", updateAmount);
-      document
-        .getElementById("editEnd")
-        .addEventListener("change", updateAmount);
-      document
-        .getElementById("editClass")
-        .addEventListener("change", updateAmount);
       async function handleApproval(recordId, approved) {
         const resp = await fetch(api(`/class-records/${recordId}/approve`), {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-password": getPass(),
-          },
-          body: JSON.stringify({
-            adminId: localStorage.getItem("adminId"),
-            approved,
-          }),
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-admin-password': getPass() },
+          body: JSON.stringify({ adminId: localStorage.getItem('adminId'), approved }),
         });
-
         if (resp.ok) {
           loadPendingRecords();
-          document.getElementById("adminMsg").textContent = `Record ${
-            approved ? "approved" : "rejected"
-          } successfully`;
+          document.getElementById('adminMsg').textContent = `Record ${approved ? 'approved' : 'rejected'} successfully`;
         }
       }
 
-      document.addEventListener("DOMContentLoaded", async () => {
+      document.addEventListener('DOMContentLoaded', async () => {
         await loadFilterOptions();
+        await loadTutors();
         loadRecords();
         loadPendingRecords();
       });
-
-      document
-        .querySelectorAll("#filterTutor, #filterClass, #filterStudent")
-        .forEach((filter) =>
-          filter.addEventListener("change", () => {
-            console.log("Filter changed:", filter.id);
-            loadRecords();
-          })
-        );
-      loadFilterOptions();
-      loadTutors();
-      loadRecords();
-      loadPendingRecords();
     </script>
   </body>
 </html>
