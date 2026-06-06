@@ -15,75 +15,55 @@ function requireAdmin(req, res, next) {
 
 const router = Router();
 
+// ── Date filter helper — uses startTime consistently ──
 function buildDateFilter(from, to) {
   const filter = {};
   if (from || to) {
-    filter.dateSubmitted = {};
+    filter.startTime = {};
     if (from) {
       const [y, m, d] = from.split('-').map(Number);
-      filter.dateSubmitted.$gte = new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
+      filter.startTime.$gte = new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
     }
     if (to) {
       const [y, m, d] = to.split('-').map(Number);
-      filter.dateSubmitted.$lte = new Date(y, (m || 1) - 1, d || 1, 23, 59, 59, 999);
+      filter.startTime.$lte = new Date(y, (m || 1) - 1, d || 1, 23, 59, 59, 999);
     }
   }
   return filter;
 }
 
-router.get("/export-raw", requireAdmin, async (req, res) => {
+// ── Export raw CSV ──
+router.get('/export-raw', requireAdmin, async (req, res) => {
   try {
     const { tutorId, from, to } = req.query;
-    const filter = {};
+    const filter = buildDateFilter(from, to);
     if (tutorId) filter.tutorId = tutorId;
-    if (from || to) {
-      filter.startTime = {};
-      if (from) filter.startTime.$gte = new Date(from);
-      if (to) {
-        const d = new Date(to);
-        d.setHours(23, 59, 59, 999);
-        filter.startTime.$lte = d;
-      }
-    }
 
     const records = await ClassRecord.find(filter)
-      .populate("tutorId")
-      .populate("studentId")
+      .populate('tutorId')
+      .populate('studentId')
       .sort({ startTime: 1 });
 
     const csv = generateRawCSV(records);
-    
-    res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="records-raw-${from || "all"}-${to || "all"}.csv"`
-    );
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="records-raw-${from || 'all'}-${to || 'all'}.csv"`);
     res.send(csv);
   } catch (err) {
-    console.error("Export raw CSV error:", err);
+    console.error('Export raw CSV error:', err);
     res.status(500).json({ message: err.message });
   }
 });
 
-// Aggregated export (summary)
-router.get("/export-aggregated", requireAdmin, async (req, res) => {
+// ── Export aggregated CSV ──
+router.get('/export-aggregated', requireAdmin, async (req, res) => {
   try {
     const { tutorId, from, to } = req.query;
-    const filter = {};
+    const filter = buildDateFilter(from, to);
     if (tutorId) filter.tutorId = tutorId;
-    if (from || to) {
-      filter.startTime = {};
-      if (from) filter.startTime.$gte = new Date(from);
-      if (to) {
-        const d = new Date(to);
-        d.setHours(23, 59, 59, 999);
-        filter.startTime.$lte = d;
-      }
-    }
 
     const aggregated = await ClassRecord.aggregate([
       { $match: filter },
-      { $lookup: { from: 'tutors', localField: 'tutorId', foreignField: '_id', as: 'tutor' }},
+      { $lookup: { from: 'tutors', localField: 'tutorId', foreignField: '_id', as: 'tutor' } },
       { $unwind: '$tutor' },
       {
         $group: {
@@ -94,12 +74,7 @@ router.get("/export-aggregated", requireAdmin, async (req, res) => {
             year: { $year: '$startTime' }
           },
           totalHours: {
-            $sum: {
-              $divide: [
-                { $subtract: ['$endTime', '$startTime'] },
-                3600000 // convert ms to hours
-              ]
-            }
+            $sum: { $divide: [{ $subtract: ['$endTime', '$startTime'] }, 3600000] }
           },
           totalAmount: { $sum: '$paymentAmount' },
           classCount: { $sum: 1 }
@@ -109,27 +84,24 @@ router.get("/export-aggregated", requireAdmin, async (req, res) => {
     ]);
 
     const csv = generateAggregatedCSV(aggregated);
-    
-    res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="records-summary-${from || "all"}-${to || "all"}.csv"`
-    );
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="records-summary-${from || 'all'}-${to || 'all'}.csv"`);
     res.send(csv);
   } catch (err) {
-    console.error("Export aggregated CSV error:", err);
+    console.error('Export aggregated CSV error:', err);
     res.status(500).json({ message: err.message });
   }
 });
 
-// Export records CSV filtered by tutor and date range
+// ── Export tutor payment CSV ──
 router.get('/export', requireAdmin, async (req, res) => {
   try {
     const { tutorId, from, to } = req.query;
     const filter = buildDateFilter(from, to);
     if (tutorId) filter.tutorId = tutorId;
+
     const records = await ClassRecord.find(filter).populate('tutorId').populate('studentId');
-    // Aggregate by tutor: sum payment amounts and output one row per tutor
+
     const byTutor = new Map();
     for (const r of records) {
       const key = (r.tutorId?._id || r.tutorId || '').toString();
@@ -146,23 +118,17 @@ router.get('/export', requireAdmin, async (req, res) => {
       const startMs = r.startTime ? new Date(r.startTime).getTime() : NaN;
       const endMs = r.endTime ? new Date(r.endTime).getTime() : NaN;
       if (!isNaN(startMs) && !isNaN(endMs) && endMs > startMs) {
-        current.Hours += (endMs - startMs) / 3600000; // hours
+        current.Hours += (endMs - startMs) / 3600000;
       }
       byTutor.set(key, current);
     }
-    // Round hours to 2 decimal places for readability
+
     const rows = Array.from(byTutor.values()).map(r => ({
       ...r,
       Hours: Math.round(r.Hours * 100) / 100
     }));
-    const fields = [
-      'TutorID',
-      'Tutor',
-      'TutorBank',
-      'TutorAccountNumber',
-      'Hours',
-      'TotalPaymentAmount'
-    ];
+
+    const fields = ['TutorID', 'Tutor', 'TutorBank', 'TutorAccountNumber', 'Hours', 'TotalPaymentAmount'];
     const parser = new Parser({ fields });
     const csv = parser.parse(rows || []);
     res.header('Content-Type', 'text/csv');
@@ -173,13 +139,15 @@ router.get('/export', requireAdmin, async (req, res) => {
   }
 });
 
-// Export student summary: aggregate hours per student (optionally filter by tutor and date range)
+// ── Export student summary CSV ──
 router.get('/export-student-summary', requireAdmin, async (req, res) => {
   try {
     const { tutorId, from, to } = req.query;
     const filter = buildDateFilter(from, to);
     if (tutorId) filter.tutorId = tutorId;
+
     const records = await ClassRecord.find(filter).populate('studentId').populate('tutorId');
+
     const byStudent = new Map();
     for (const r of records) {
       const key = (r.studentId?._id || r.studentId || '').toString();
@@ -193,14 +161,16 @@ router.get('/export-student-summary', requireAdmin, async (req, res) => {
       const startMs = r.startTime ? new Date(r.startTime).getTime() : NaN;
       const endMs = r.endTime ? new Date(r.endTime).getTime() : NaN;
       if (!isNaN(startMs) && !isNaN(endMs) && endMs > startMs) {
-        current.Hours += (endMs - startMs) / 3600000; // hours
+        current.Hours += (endMs - startMs) / 3600000;
       }
       byStudent.set(key, current);
     }
+
     const rows = Array.from(byStudent.values()).map(r => ({
       ...r,
       Hours: Math.round(r.Hours * 100) / 100
     }));
+
     const fields = ['StudentID', 'Student', 'Class', 'Hours'];
     const parser = new Parser({ fields });
     const csv = parser.parse(rows || []);
@@ -212,12 +182,13 @@ router.get('/export-student-summary', requireAdmin, async (req, res) => {
   }
 });
 
-// Approve late submission for a specific record (allows resubmission)
+// ── Approve late submission ──
 router.post('/late-approve/:recordId', requireAdmin, async (req, res) => {
   try {
     const { recordId } = req.params;
     const { adminName, notes } = req.body;
     if (!adminName) return res.status(400).json({ message: 'adminName is required' });
+
     const record = await ClassRecord.findById(recordId);
     if (!record) return res.status(404).json({ message: 'Record not found' });
 
@@ -240,55 +211,34 @@ router.post('/late-approve/:recordId', requireAdmin, async (req, res) => {
   }
 });
 
-// List tutors for admin dropdown
+// ── List tutors for admin dropdown ──
 router.get('/tutors', requireAdmin, async (_req, res) => {
   const tutors = await Tutor.find().sort({ name: 1 });
   res.json(tutors);
 });
 
-// Helper functions for CSV generation
+// ── CSV helper functions ──
 function generateRawCSV(records) {
-  const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const header = [
-    "Date",
-    "Tutor",
-    "Student",
-    "Class",
-    "Subject",
-    "Topic",
-    "Start Time",
-    "End Time",
-    "Amount (₦)",
-    "Status"
-  ].join(",");
-
+  const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const header = ['Date', 'Tutor', 'Student', 'Class', 'Subject', 'Topic', 'Start Time', 'End Time', 'Amount (₦)', 'Status'].join(',');
   const rows = records.map(r => [
     new Date(r.startTime).toLocaleDateString(),
-    r.tutorId?.name || "",
-    r.studentId?.name || "",
-    r.classLevel || "",
-    r.subject || "",
-    r.topic || "",
+    r.tutorId?.name || '',
+    r.studentId?.name || '',
+    r.classLevel || '',
+    r.subject || '',
+    r.topic || '',
     new Date(r.startTime).toLocaleString(),
     new Date(r.endTime).toLocaleString(),
     r.paymentAmount || 0,
-    r.status || ""
-  ].map(escape).join(","));
-
-  return [header, ...rows].join("\n");
+    r.status || ''
+  ].map(escape).join(','));
+  return [header, ...rows].join('\n');
 }
 
 function generateAggregatedCSV(aggregated) {
-  const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const header = [
-    "Year",
-    "Month",
-    "Tutor",
-    "Total Classes",
-    "Total Hours",
-    "Total Amount (₦)"
-  ].join(",");
-
+  const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const header = ['Year', 'Month', 'Tutor', 'Total Classes', 'Total Hours', 'Total Amount (₦)'].join(',');
   const rows = aggregated.map(r => [
     r._id.year,
     r._id.month,
@@ -296,10 +246,8 @@ function generateAggregatedCSV(aggregated) {
     r.classCount,
     r.totalHours.toFixed(2),
     r.totalAmount.toLocaleString()
-  ].map(escape).join(","));
-
-  return [header, ...rows].join("\n");
+  ].map(escape).join(','));
+  return [header, ...rows].join('\n');
 }
+
 export default router;
-
-
