@@ -13,7 +13,7 @@
           <a href="/">Home</a>
           <a href="/student.html">Register Student</a>
           <a href="/class-record.html">Class Record</a>
-          <a href="/admin.html">Admin</a>
+          <a href="/admin-login.html">Admin</a>
         </nav>
       </div>
     </header>
@@ -43,6 +43,11 @@
         <button onclick="createTutor()">Save Tutor</button>
         <div id="tutorMsg" class="muted"></div>
       </section>
+
+      <section style="margin-top: 2rem;">
+        <h2>Registered Tutors</h2>
+        <div id="tutorList"></div>
+      </section>
     </div>
 
     <script>
@@ -61,14 +66,73 @@
         const accountNumber = document.getElementById('tutorAcct').value.trim();
         const bank = document.getElementById('tutorBank').value.trim();
         const subjects = getSelectedValues(document.getElementById('tutorSubjects'));
+        const msg = document.getElementById('tutorMsg');
+
+        if (!name || !accountNumber || !bank || !subjects.length) {
+          msg.textContent = 'Please fill in all fields and select at least one subject';
+          msg.style.color = 'red';
+          return;
+        }
+
         const res = await fetch(api('/tutors'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, accountNumber, bank, subjects })
         });
         const out = await res.json();
-        document.getElementById('tutorMsg').textContent = res.ok ? 'Tutor saved' : out.message;
+        msg.style.color = res.ok ? '' : 'red';
+        msg.textContent = res.ok ? 'Tutor saved successfully' : out.message;
+        if (res.ok) {
+          document.getElementById('tutorName').value = '';
+          document.getElementById('tutorAcct').value = '';
+          document.getElementById('tutorBank').value = '';
+          loadTutors();
+        }
       }
+
+      async function deleteTutor(id, name) {
+        if (!confirm(`Delete tutor "${name}"? This cannot be undone.`)) return;
+        const res = await fetch(api(`/tutors/${id}`), { method: 'DELETE' });
+        const out = await res.json();
+        document.getElementById('tutorMsg').textContent = out.message;
+        document.getElementById('tutorMsg').style.color = res.ok ? '' : 'red';
+        if (res.ok) loadTutors();
+      }
+
+      async function loadTutors() {
+        const res = await fetch(api('/tutors'));
+        const tutors = await res.json();
+        const list = document.getElementById('tutorList');
+        if (!tutors.length) { list.innerHTML = '<p class="muted">No tutors registered yet.</p>'; return; }
+        list.innerHTML = `
+          <table style="width:100%; border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left; padding:8px; border-bottom:1px solid #333;">Name</th>
+                <th style="text-align:left; padding:8px; border-bottom:1px solid #333;">Bank</th>
+                <th style="text-align:left; padding:8px; border-bottom:1px solid #333;">Account</th>
+                <th style="text-align:left; padding:8px; border-bottom:1px solid #333;">Subjects</th>
+                <th style="text-align:left; padding:8px; border-bottom:1px solid #333;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tutors.map(t => `
+                <tr>
+                  <td style="padding:8px; border-bottom:1px solid #222;">${t.name}</td>
+                  <td style="padding:8px; border-bottom:1px solid #222;">${t.bank}</td>
+                  <td style="padding:8px; border-bottom:1px solid #222;">${t.accountNumber}</td>
+                  <td style="padding:8px; border-bottom:1px solid #222;">${t.subjects.join(', ')}</td>
+                  <td style="padding:8px; border-bottom:1px solid #222;">
+                    <button onclick="deleteTutor('${t._id}', '${t.name}')" class="small danger">Delete</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      loadTutors();
     </script>
   </body>
 </html>
