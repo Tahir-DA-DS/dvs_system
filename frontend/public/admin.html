@@ -127,6 +127,13 @@
           </table>
         </div>
       </section>
+
+      <section style="margin-top: 16px;">
+        <h2>Hourly Rate Settings</h2>
+        <p class="muted">Changes apply to all new class records. Existing records are not affected.</p>
+        <div id="ratesContainer" style="margin-top: 12px;"></div>
+        <div id="ratesMsg" class="muted" style="margin-top: 8px;"></div>
+      </section>
     </div>
 
     <div id="editModal" class="modal" aria-hidden="true">
@@ -564,7 +571,82 @@
         await loadTutors();
         loadRecords();
         loadPendingRecords();
+        loadRates();
       });
+
+      // ── Rates editor ──
+      async function loadRates() {
+        try {
+          const res = await fetch(api('/rates'));
+          if (!res.ok) return;
+          const rates = await res.json();
+          const container = document.getElementById('ratesContainer');
+          container.innerHTML = `
+            <table style="width:100%;border-collapse:collapse;max-width:500px;">
+              <thead>
+                <tr>
+                  <th style="text-align:left;padding:8px;border-bottom:1px solid #333;">Level / Subject</th>
+                  <th style="text-align:left;padding:8px;border-bottom:1px solid #333;">Rate (₦/hr)</th>
+                  <th style="text-align:left;padding:8px;border-bottom:1px solid #333;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rates.map(r => `
+                  <tr data-key="${r.key}">
+                    <td style="padding:8px;border-bottom:1px solid #222;">${r.label}</td>
+                    <td style="padding:8px;border-bottom:1px solid #222;">
+                      <input
+                        type="number"
+                        id="rate_${r.key}"
+                        value="${r.ratePerHour}"
+                        min="0"
+                        step="100"
+                        style="width:120px;padding:4px 8px;background:#1a2540;border:1px solid #333;color:#fff;border-radius:4px;"
+                      />
+                    </td>
+                    <td style="padding:8px;border-bottom:1px solid #222;">
+                      <button onclick="saveRate('${r.key}')" class="small">Save</button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          `;
+        } catch (err) {
+          console.error('Failed to load rates:', err);
+        }
+      }
+
+      async function saveRate(key) {
+        const input = document.getElementById(`rate_${key}`);
+        const ratePerHour = Number(input.value);
+        const msg = document.getElementById('ratesMsg');
+
+        if (isNaN(ratePerHour) || ratePerHour < 0) {
+          msg.textContent = 'Please enter a valid rate';
+          msg.style.color = 'red';
+          return;
+        }
+
+        try {
+          const res = await fetch(api(`/rates/${key}`), {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-admin-password': getPass(),
+            },
+            body: JSON.stringify({ ratePerHour }),
+          });
+          const out = await res.json();
+          msg.style.color = res.ok ? '' : 'red';
+          msg.textContent = res.ok
+            ? `✅ Rate updated to ₦${ratePerHour.toLocaleString()}/hr`
+            : out.message;
+        } catch (err) {
+          msg.textContent = 'Network error';
+          msg.style.color = 'red';
+        }
+      }
     </script>
   </body>
 </html>

@@ -82,13 +82,34 @@
           .map(c => `<option>${c}</option>`).join('');
       }
 
-      function getRate(classLevel, subject) {
-        if (subject && String(subject).toLowerCase().trim() === 'igbo') return 4000;
+      // Live rates loaded from DB
+      let _ratesCache = null;
+
+      async function fetchRates() {
+        if (_ratesCache) return _ratesCache;
+        try {
+          const res = await fetch(api('/rates'));
+          if (res.ok) _ratesCache = await res.json();
+        } catch (e) { console.warn('Could not fetch rates, using defaults'); }
+        return _ratesCache;
+      }
+
+      function getRateFromCache(classLevel, subject) {
+        const rates = _ratesCache;
+        const rateMap = rates ? Object.fromEntries(rates.map(r => [r.key, r.ratePerHour])) : {};
+        const fallback = { subject_igbo: 4000, nursery_year1_6: 3800, year7_10: 4300, year11_12: 5000 };
+        const get = (key) => rateMap[key] ?? fallback[key] ?? 0;
+
+        if (subject && subject.toLowerCase().trim() === 'igbo') return get('subject_igbo');
         const lvl = (classLevel || '').toLowerCase().trim();
-        if (lvl === 'nursery' || /\byear\s*(?:[1-6])\b/i.test(lvl)) return 3800;
-        if (/\byear\s*(?:7|8|9|10)\b/i.test(lvl)) return 4300;
-        if (/\byear\s*(?:11|12)\b/i.test(lvl)) return 5000;
+        if (lvl === 'nursery' || /\byear\s*(?:[1-6])\b/i.test(lvl)) return get('nursery_year1_6');
+        if (/\byear\s*(?:7|8|9|10)\b/i.test(lvl)) return get('year7_10');
+        if (/\byear\s*(?:11|12)\b/i.test(lvl)) return get('year11_12');
         return 0;
+      }
+
+      function getRate(classLevel, subject) {
+        return getRateFromCache(classLevel, subject);
       }
 
       function recalc() {
@@ -262,6 +283,7 @@
         }
       }
 
+      fetchRates().then(() => recalc());
       loadDropdowns();
     </script>
   </body>

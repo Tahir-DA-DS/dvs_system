@@ -6,16 +6,17 @@ import tutorRouter from './tutors.js';
 import studentRouter from './students.js';
 import classRecordRouter from './classRecords.js';
 import adminRouter from './admin.js';
-import { Tutor, Student, AdminActionLog, ClassRecord } from './models.js';
+import ratesRouter from './rates.js';
+import { Tutor, Student, AdminActionLog, ClassRecord, seedRatesIfEmpty } from './models.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/dvs_attendance';
 
 const allowedOrigins = [
-  'http://localhost:5173',                // Vite dev server
-  'http://localhost:3000',               // local fallback
-  process.env.FRONTEND_URL,             // your Vercel URL (set in Render env vars)
+  'http://localhost:5173',
+  'http://localhost:3000',
+  process.env.FRONTEND_URL,
 ].filter(Boolean);
 
 app.use(cors({
@@ -32,13 +33,14 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ── Health endpoint — keeps Render free tier warm ──
+// ── Health endpoint ──
 app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
 
 app.use('/api/tutors', tutorRouter);
 app.use('/api/students', studentRouter);
 app.use('/api/class-records', classRecordRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/rates', ratesRouter);
 
 mongoose
   .connect(MONGO_URI)
@@ -49,6 +51,9 @@ mongoose
     await Student.syncIndexes();
     await ClassRecord.syncIndexes();
     await AdminActionLog.syncIndexes();
+
+    // ── Seed default rates if none exist ──
+    await seedRatesIfEmpty();
 
     console.log('✅ Indexes synchronized');
 
