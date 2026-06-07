@@ -7,7 +7,7 @@ import studentRouter from './students.js';
 import classRecordRouter from './classRecords.js';
 import adminRouter from './admin.js';
 import ratesRouter from './rates.js';
-import { Tutor, Student, AdminActionLog, ClassRecord, Rate, seedRatesIfEmpty } from './models.js';
+import { Tutor, Student, AdminActionLog, ClassRecord, Rate, seedRatesIfEmpty, calculatePaymentAmount } from './models.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -41,6 +41,30 @@ app.use('/api/students', studentRouter);
 app.use('/api/class-records', classRecordRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/rates', ratesRouter);
+
+// ── TEMPORARY: one-time payment fix route ──
+app.get('/admin/fix-payments', async (req, res) => {
+  const pass = req.headers['x-admin-password'] || req.query.p;
+  if (pass !== (process.env.ADMIN_PASSWORD || 'dvsAdmin0023'))
+    return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const records = await ClassRecord.find({ paymentAmount: 0 });
+    let fixed = 0;
+    let skipped = 0;
+    for (const record of records) {
+      const start = new Date(record.startTime);
+      const end = new Date(record.endTime);
+      if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) { skipped++; continue; }
+      const paymentAmount = await calculatePaymentAmount(record.classLevel, record.subject, start, end);
+      if (paymentAmount === 0) { skipped++; continue; }
+      await ClassRecord.updateOne({ _id: record._id }, { $set: { paymentAmount } });
+      fixed++;
+    }
+    res.json({ message: `Done — ${fixed} fixed, ${skipped} skipped`, total: records.length });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 // Handles first-time seed AND migration from old rate keys to new ones
 async function migrateRates() {
