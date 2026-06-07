@@ -50,17 +50,30 @@ app.get('/admin/fix-payments', async (req, res) => {
   try {
     const records = await ClassRecord.find({ paymentAmount: 0 });
     let fixed = 0;
-    let skipped = 0;
+    const details = [];
     for (const record of records) {
       const start = new Date(record.startTime);
       const end = new Date(record.endTime);
-      if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) { skipped++; continue; }
-      const paymentAmount = await calculatePaymentAmount(record.classLevel, record.subject, start, end);
-      if (paymentAmount === 0) { skipped++; continue; }
-      await ClassRecord.updateOne({ _id: record._id }, { $set: { paymentAmount } });
-      fixed++;
+      const validTimes = !isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start;
+      const paymentAmount = validTimes
+        ? await calculatePaymentAmount(record.classLevel, record.subject, start, end)
+        : 0;
+      if (paymentAmount > 0) {
+        await ClassRecord.updateOne({ _id: record._id }, { $set: { paymentAmount } });
+        fixed++;
+      }
+      details.push({
+        id: record._id,
+        classLevel: record.classLevel,
+        subject: record.subject,
+        startTime: record.startTime,
+        endTime: record.endTime,
+        validTimes,
+        calculatedAmount: paymentAmount,
+        action: paymentAmount > 0 ? 'fixed' : 'skipped'
+      });
     }
-    res.json({ message: `Done — ${fixed} fixed, ${skipped} skipped`, total: records.length });
+    res.json({ message: `Done — ${fixed} fixed`, total: records.length, details });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
