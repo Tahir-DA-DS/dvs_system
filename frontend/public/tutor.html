@@ -186,8 +186,11 @@
       }
 
       // Close modal on backdrop click
-      document.getElementById('editTutorModal').addEventListener('click', (e) => {
-        if (e.target.id === 'editTutorModal') closeEditTutorModal();
+      document.addEventListener('DOMContentLoaded', () => {
+        const modal = document.getElementById('editTutorModal');
+        if (modal) modal.addEventListener('click', (e) => {
+          if (e.target.id === 'editTutorModal') closeEditTutorModal();
+        });
       });
 
       loadTutors();
