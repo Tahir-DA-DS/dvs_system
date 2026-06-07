@@ -56,7 +56,7 @@ router.post("/", async (req, res) => {
     if (lessonDate !== submitDate)
       return res.status(400).json({ message: "Class records must be submitted the same day as the lesson. Please use /late-submission for late submissions." });
 
-    const paymentAmount = calculatePaymentAmount(classLevel, subject, start, end);
+    const paymentAmount = await calculatePaymentAmount(classLevel, subject, start, end);
     const record = await ClassRecord.create({
       tutorId, studentId, classLevel, subject, topic,
       startTime: start, endTime: end,
@@ -144,7 +144,7 @@ router.post("/late-submission", async (req, res) => {
     if (overlapping)
       return res.status(400).json({ message: "Duplicate or overlapping class record already exists." });
 
-    const paymentAmount = calculatePaymentAmount(classLevel, subject, start, end);
+    const paymentAmount = await calculatePaymentAmount(classLevel, subject, start, end);
     const record = await ClassRecord.create({
       tutorId, studentId, classLevel, subject, topic,
       startTime: start, endTime: end,
@@ -248,7 +248,7 @@ router.put("/:id", async (req, res) => {
     if (!tutor.subjects.includes(subject))
       return res.status(400).json({ message: "Selected subject is not in tutor's subjects" });
 
-    const paymentAmount = calculatePaymentAmount(classLevel, subject, new Date(startTime), new Date(endTime));
+    const paymentAmount = await calculatePaymentAmount(classLevel, subject, new Date(startTime), new Date(endTime));
 
     Object.assign(record, {
       tutorId, studentId, classLevel, subject, topic,
