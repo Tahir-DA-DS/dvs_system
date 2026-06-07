@@ -112,7 +112,7 @@
                 <th style="text-align:left; padding:8px; border-bottom:1px solid #333;">Bank</th>
                 <th style="text-align:left; padding:8px; border-bottom:1px solid #333;">Account</th>
                 <th style="text-align:left; padding:8px; border-bottom:1px solid #333;">Subjects</th>
-                <th style="text-align:left; padding:8px; border-bottom:1px solid #333;">Action</th>
+                <th style="text-align:left; padding:8px; border-bottom:1px solid #333;">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -122,7 +122,8 @@
                   <td style="padding:8px; border-bottom:1px solid #222;">${t.bank}</td>
                   <td style="padding:8px; border-bottom:1px solid #222;">${t.accountNumber}</td>
                   <td style="padding:8px; border-bottom:1px solid #222;">${t.subjects.join(', ')}</td>
-                  <td style="padding:8px; border-bottom:1px solid #222;">
+                  <td style="padding:8px; border-bottom:1px solid #222; display:flex; gap:6px;">
+                    <button onclick="openEditTutorModal('${t._id}', '${t.name}', '${t.accountNumber}', '${t.bank}', ${JSON.stringify(t.subjects)})" class="small">Edit</button>
                     <button onclick="deleteTutor('${t._id}', '${t.name}')" class="small danger">Delete</button>
                   </td>
                 </tr>
@@ -132,7 +133,101 @@
         `;
       }
 
+      function openEditTutorModal(id, name, accountNumber, bank, subjects) {
+        document.getElementById('editTutorId').value = id;
+        document.getElementById('editTutorName').value = name;
+        document.getElementById('editTutorAcct').value = accountNumber;
+        document.getElementById('editTutorBank').value = bank;
+        document.getElementById('editTutorMsg').textContent = '';
+        // Set selected subjects
+        const sel = document.getElementById('editTutorSubjects');
+        Array.from(sel.options).forEach(opt => {
+          opt.selected = subjects.includes(opt.value);
+        });
+        const modal = document.getElementById('editTutorModal');
+        modal.style.display = 'flex';
+      }
+
+      function closeEditTutorModal() {
+        document.getElementById('editTutorModal').style.display = 'none';
+      }
+
+      async function saveTutorEdit() {
+        const id = document.getElementById('editTutorId').value;
+        const name = document.getElementById('editTutorName').value.trim();
+        const accountNumber = document.getElementById('editTutorAcct').value.trim();
+        const bank = document.getElementById('editTutorBank').value.trim();
+        const subjects = Array.from(document.getElementById('editTutorSubjects').selectedOptions).map(o => o.value);
+        const msg = document.getElementById('editTutorMsg');
+
+        if (!name || !accountNumber || !bank || !subjects.length) {
+          msg.textContent = 'Please fill in all fields and select at least one subject';
+          msg.style.color = 'red';
+          return;
+        }
+
+        const res = await fetch(api(`/tutors/${id}`), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, accountNumber, bank, subjects })
+        });
+        const out = await res.json();
+        if (res.ok) {
+          closeEditTutorModal();
+          document.getElementById('tutorMsg').textContent = `Tutor "${name}" updated successfully`;
+          document.getElementById('tutorMsg').style.color = '';
+          loadTutors();
+        } else {
+          msg.textContent = out.message;
+          msg.style.color = 'red';
+        }
+      }
+
+      // Close modal on backdrop click
+      document.getElementById('editTutorModal').addEventListener('click', (e) => {
+        if (e.target.id === 'editTutorModal') closeEditTutorModal();
+      });
+
       loadTutors();
     </script>
+
+    <!-- Edit Tutor Modal -->
+    <div id="editTutorModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:999; align-items:center; justify-content:center;">
+      <div style="background:#1a2540; border:1px solid #2a3a5a; border-radius:12px; padding:2rem; width:90%; max-width:480px;">
+        <h3 style="margin-bottom:1rem; color:#fff;">Edit Tutor</h3>
+        <input type="hidden" id="editTutorId" />
+        <label style="display:block; margin-bottom:0.5rem;">Full Name
+          <input id="editTutorName" style="width:100%; margin-top:4px;" />
+        </label>
+        <label style="display:block; margin-bottom:0.5rem; margin-top:0.8rem;">Account Number
+          <input id="editTutorAcct" style="width:100%; margin-top:4px;" />
+        </label>
+        <label style="display:block; margin-bottom:0.5rem; margin-top:0.8rem;">Bank Name
+          <input id="editTutorBank" style="width:100%; margin-top:4px;" />
+        </label>
+        <label style="display:block; margin-bottom:0.5rem; margin-top:0.8rem;">Subjects (Ctrl/Cmd + Click to multi-select)
+          <select id="editTutorSubjects" multiple size="8" style="width:100%; margin-top:4px;">
+            <option>Mathematics</option>
+            <option>English</option>
+            <option>Physics</option>
+            <option>Chemistry</option>
+            <option>Biology</option>
+            <option>Economics</option>
+            <option>Government</option>
+            <option>Literature</option>
+            <option>Computer Science</option>
+            <option>Coding</option>
+            <option>Sciences</option>
+            <option>Igbo</option>
+            <option>French</option>
+          </select>
+        </label>
+        <div id="editTutorMsg" style="margin-top:0.5rem; font-size:0.85rem;"></div>
+        <div style="display:flex; gap:0.8rem; margin-top:1.2rem;">
+          <button onclick="saveTutorEdit()">Save Changes</button>
+          <button onclick="closeEditTutorModal()" class="muted">Cancel</button>
+        </div>
+      </div>
+    </div>
   </body>
 </html>
