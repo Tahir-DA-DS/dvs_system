@@ -47,6 +47,17 @@ app.get('/admin/fix-payments', async (req, res) => {
   const pass = req.headers['x-admin-password'] || req.query.p;
   if (pass !== (process.env.ADMIN_PASSWORD || 'dvsAdmin0023'))
     return res.status(401).json({ message: 'Unauthorized' });
+
+  // Inline rate lookup — bypasses DB, uses hardcoded fallback directly
+  function getRateInline(classLevel, subject) {
+    const lvl = (classLevel || '').toLowerCase().trim();
+    const isLang = subject && ['igbo', 'yoruba'].includes(String(subject).toLowerCase().trim());
+    if (/year\s*(11|12)\b/i.test(lvl)) return isLang ? 4500 : 5000;
+    if (/year\s*(7|8|9|10)\b/i.test(lvl)) return isLang ? 4500 : 4300;
+    if (lvl === 'nursery' || /year\s*([1-6])\b/i.test(lvl)) return isLang ? 4000 : 3800;
+    return 0;
+  }
+
   try {
     const records = await ClassRecord.find({ paymentAmount: 0 });
     let fixed = 0;
@@ -55,9 +66,9 @@ app.get('/admin/fix-payments', async (req, res) => {
       const start = new Date(record.startTime);
       const end = new Date(record.endTime);
       const validTimes = !isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start;
-      const paymentAmount = validTimes
-        ? await calculatePaymentAmount(record.classLevel, record.subject, start, end)
-        : 0;
+      const rate = validTimes ? getRateInline(record.classLevel, record.subject) : 0;
+      const minutes = validTimes ? (end.getTime() - start.getTime()) / 60000 : 0;
+      const paymentAmount = Math.round(rate * (minutes / 60));
       if (paymentAmount > 0) {
         await ClassRecord.updateOne({ _id: record._id }, { $set: { paymentAmount } });
         fixed++;
@@ -66,9 +77,8 @@ app.get('/admin/fix-payments', async (req, res) => {
         id: record._id,
         classLevel: record.classLevel,
         subject: record.subject,
-        startTime: record.startTime,
-        endTime: record.endTime,
-        validTimes,
+        rate,
+        minutes,
         calculatedAmount: paymentAmount,
         action: paymentAmount > 0 ? 'fixed' : 'skipped'
       });
