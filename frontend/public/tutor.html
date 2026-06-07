@@ -104,6 +104,8 @@
         const tutors = await res.json();
         const list = document.getElementById('tutorList');
         if (!tutors.length) { list.innerHTML = '<p class="muted">No tutors registered yet.</p>'; return; }
+        // Store tutors data for modal access
+        window._tutorsData = tutors;
         list.innerHTML = `
           <table style="width:100%; border-collapse:collapse;">
             <thead>
@@ -116,14 +118,14 @@
               </tr>
             </thead>
             <tbody>
-              ${tutors.map(t => `
+              ${tutors.map((t, i) => `
                 <tr>
                   <td style="padding:8px; border-bottom:1px solid #222;">${t.name}</td>
                   <td style="padding:8px; border-bottom:1px solid #222;">${t.bank}</td>
                   <td style="padding:8px; border-bottom:1px solid #222;">${t.accountNumber}</td>
                   <td style="padding:8px; border-bottom:1px solid #222;">${t.subjects.join(', ')}</td>
                   <td style="padding:8px; border-bottom:1px solid #222; display:flex; gap:6px;">
-                    <button onclick="openEditTutorModal('${t._id}', '${t.name}', '${t.accountNumber}', '${t.bank}', ${JSON.stringify(t.subjects)})" class="small">Edit</button>
+                    <button onclick="openEditTutorModal(${i})" class="small">Edit</button>
                     <button onclick="deleteTutor('${t._id}', '${t.name}')" class="small danger">Delete</button>
                   </td>
                 </tr>
@@ -133,19 +135,19 @@
         `;
       }
 
-      function openEditTutorModal(id, name, accountNumber, bank, subjects) {
-        document.getElementById('editTutorId').value = id;
-        document.getElementById('editTutorName').value = name;
-        document.getElementById('editTutorAcct').value = accountNumber;
-        document.getElementById('editTutorBank').value = bank;
+      function openEditTutorModal(index) {
+        const t = window._tutorsData[index];
+        if (!t) return;
+        document.getElementById('editTutorId').value = t._id;
+        document.getElementById('editTutorName').value = t.name;
+        document.getElementById('editTutorAcct').value = t.accountNumber;
+        document.getElementById('editTutorBank').value = t.bank;
         document.getElementById('editTutorMsg').textContent = '';
-        // Set selected subjects
         const sel = document.getElementById('editTutorSubjects');
         Array.from(sel.options).forEach(opt => {
-          opt.selected = subjects.includes(opt.value);
+          opt.selected = t.subjects.includes(opt.value);
         });
-        const modal = document.getElementById('editTutorModal');
-        modal.style.display = 'flex';
+        document.getElementById('editTutorModal').style.display = 'flex';
       }
 
       function closeEditTutorModal() {
