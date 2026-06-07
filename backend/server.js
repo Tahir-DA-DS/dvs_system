@@ -7,7 +7,7 @@ import studentRouter from './students.js';
 import classRecordRouter from './classRecords.js';
 import adminRouter from './admin.js';
 import ratesRouter from './rates.js';
-import { Tutor, Student, AdminActionLog, ClassRecord, seedRatesIfEmpty } from './models.js';
+import { Tutor, Student, AdminActionLog, ClassRecord, Rate, seedRatesIfEmpty } from './models.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,6 +42,24 @@ app.use('/api/class-records', classRecordRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/rates', ratesRouter);
 
+// Handles first-time seed AND migration from old rate keys to new ones
+async function migrateRates() {
+  const NEW_RATES = [
+    { key: 'nursery_year1_6',       label: 'Nursery – Year 6 (General)',        ratePerHour: 3800, type: 'classLevel' },
+    { key: 'year7_10',              label: 'Year 7 – Year 10 (General)',         ratePerHour: 4300, type: 'classLevel' },
+    { key: 'year11_12',             label: 'Year 11 – Year 12 (General)',        ratePerHour: 5000, type: 'classLevel' },
+    { key: 'igbo_yoruba_nursery_6', label: 'Igbo / Yoruba – Nursery to Year 6', ratePerHour: 4000, type: 'subject' },
+    { key: 'igbo_yoruba_year7_12',  label: 'Igbo / Yoruba – Year 7 to Year 12', ratePerHour: 4500, type: 'subject' },
+  ];
+  // Remove old subject_igbo key if it exists
+  await Rate.deleteOne({ key: 'subject_igbo' });
+  // Upsert each new rate
+  for (const r of NEW_RATES) {
+    await Rate.updateOne({ key: r.key }, { $setOnInsert: r }, { upsert: true });
+  }
+  console.log('✅ Rates migrated');
+}
+
 mongoose
   .connect(MONGO_URI)
   .then(async () => {
@@ -52,8 +70,8 @@ mongoose
     await ClassRecord.syncIndexes();
     await AdminActionLog.syncIndexes();
 
-    // ── Seed default rates if none exist ──
-    await seedRatesIfEmpty();
+    // ── Migrate rates to new structure if needed ──
+    await migrateRates();
 
     console.log('✅ Indexes synchronized');
 

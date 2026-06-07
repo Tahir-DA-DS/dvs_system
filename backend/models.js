@@ -92,10 +92,11 @@ export const Rate = mongoose.model('Rate', RateSchema);
 
 // ── Default rates (used as fallback if DB has no rates yet) ──
 const DEFAULT_RATES = {
-  subject_igbo:   4000,
-  nursery_year1_6: 3800,
-  year7_10:       4300,
-  year11_12:      5000,
+  nursery_year1_6:       3800,
+  year7_10:              4300,
+  year11_12:             5000,
+  igbo_yoruba_nursery_6: 4000,
+  igbo_yoruba_year7_12:  4500,
 };
 
 // ── Seed default rates into DB if collection is empty ──
@@ -103,42 +104,53 @@ export async function seedRatesIfEmpty() {
   const count = await Rate.countDocuments();
   if (count > 0) return;
   await Rate.insertMany([
-    { key: 'subject_igbo',    label: 'Igbo (any level)',  ratePerHour: 4000, type: 'subject' },
-    { key: 'nursery_year1_6', label: 'Nursery – Year 6',  ratePerHour: 3800, type: 'classLevel' },
-    { key: 'year7_10',        label: 'Year 7 – Year 10',  ratePerHour: 4300, type: 'classLevel' },
-    { key: 'year11_12',       label: 'Year 11 – Year 12', ratePerHour: 5000, type: 'classLevel' },
+    { key: 'nursery_year1_6',         label: 'Nursery – Year 6 (General)',          ratePerHour: 3800, type: 'classLevel' },
+    { key: 'year7_10',                label: 'Year 7 – Year 10 (General)',           ratePerHour: 4300, type: 'classLevel' },
+    { key: 'year11_12',               label: 'Year 11 – Year 12 (General)',          ratePerHour: 5000, type: 'classLevel' },
+    { key: 'igbo_yoruba_nursery_6',   label: 'Igbo / Yoruba – Nursery to Year 6',   ratePerHour: 4000, type: 'subject' },
+    { key: 'igbo_yoruba_year7_12',    label: 'Igbo / Yoruba – Year 7 to Year 12',   ratePerHour: 4500, type: 'subject' },
   ]);
   console.log('✅ Default rates seeded');
 }
 
 // ── Get hourly rate from DB (async) ──
+const LANGUAGE_SUBJECTS = ['igbo', 'yoruba'];
+
+function isLanguageSubject(subject) {
+  return subject && LANGUAGE_SUBJECTS.includes(String(subject).toLowerCase().trim());
+}
+
 export async function getHourlyRate(classLevel, subject) {
   const rates = await Rate.find();
   const rateMap = Object.fromEntries(rates.map(r => [r.key, r.ratePerHour]));
-
-  // Subject overrides take priority
-  if (subject && subject.toLowerCase().trim() === 'igbo') {
-    return rateMap['subject_igbo'] ?? DEFAULT_RATES['subject_igbo'];
-  }
+  const get = (key) => rateMap[key] ?? DEFAULT_RATES[key] ?? 0;
 
   const lvl = (classLevel || '').toLowerCase().trim();
-  if (lvl === 'nursery' || /\byear\s*(?:[1-6])\b/i.test(lvl))
-    return rateMap['nursery_year1_6'] ?? DEFAULT_RATES['nursery_year1_6'];
-  if (/\byear\s*(?:7|8|9|10)\b/i.test(lvl))
-    return rateMap['year7_10'] ?? DEFAULT_RATES['year7_10'];
-  if (/\byear\s*(?:11|12)\b/i.test(lvl))
-    return rateMap['year11_12'] ?? DEFAULT_RATES['year11_12'];
+  const isLang = isLanguageSubject(subject);
+
+  // Nursery – Year 6
+  if (lvl === 'nursery' || /year\s*(?:[1-6])/i.test(lvl)) {
+    return isLang ? get('igbo_yoruba_nursery_6') : get('nursery_year1_6');
+  }
+  // Year 7 – Year 10
+  if (/year\s*(?:7|8|9|10)/i.test(lvl)) {
+    return isLang ? get('igbo_yoruba_year7_12') : get('year7_10');
+  }
+  // Year 11 – Year 12
+  if (/year\s*(?:11|12)/i.test(lvl)) {
+    return isLang ? get('igbo_yoruba_year7_12') : get('year11_12');
+  }
 
   return 0;
 }
 
 // ── Sync version (fallback for non-async contexts) ──
 export function getHourlyRateForClassLevel(classLevel, subject) {
-  if (subject && String(subject).toLowerCase().trim() === 'igbo') return 4000;
   const lvl = (classLevel || '').toLowerCase().trim();
-  if (lvl === 'nursery' || /\byear\s*(?:[1-6])\b/i.test(lvl)) return 3800;
-  if (/\byear\s*(?:7|8|9|10)\b/i.test(lvl)) return 4300;
-  if (/\byear\s*(?:11|12)\b/i.test(lvl)) return 5000;
+  const isLang = subject && ['igbo', 'yoruba'].includes(String(subject).toLowerCase().trim());
+  if (lvl === 'nursery' || /year\s*(?:[1-6])/i.test(lvl)) return isLang ? 4000 : 3800;
+  if (/year\s*(?:7|8|9|10)/i.test(lvl)) return isLang ? 4500 : 4300;
+  if (/year\s*(?:11|12)/i.test(lvl)) return isLang ? 4500 : 5000;
   return 0;
 }
 

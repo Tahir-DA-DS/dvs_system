@@ -97,14 +97,22 @@
       function getRateFromCache(classLevel, subject) {
         const rates = _ratesCache;
         const rateMap = rates ? Object.fromEntries(rates.map(r => [r.key, r.ratePerHour])) : {};
-        const fallback = { subject_igbo: 4000, nursery_year1_6: 3800, year7_10: 4300, year11_12: 5000 };
+        const fallback = {
+          nursery_year1_6:       3800,
+          year7_10:              4300,
+          year11_12:             5000,
+          igbo_yoruba_nursery_6: 4000,
+          igbo_yoruba_year7_12:  4500,
+        };
         const get = (key) => rateMap[key] ?? fallback[key] ?? 0;
-
-        if (subject && subject.toLowerCase().trim() === 'igbo') return get('subject_igbo');
+        const isLang = subject && ['igbo', 'yoruba'].includes(subject.toLowerCase().trim());
         const lvl = (classLevel || '').toLowerCase().trim();
-        if (lvl === 'nursery' || /\byear\s*(?:[1-6])\b/i.test(lvl)) return get('nursery_year1_6');
-        if (/\byear\s*(?:7|8|9|10)\b/i.test(lvl)) return get('year7_10');
-        if (/\byear\s*(?:11|12)\b/i.test(lvl)) return get('year11_12');
+        if (lvl === 'nursery' || /\byear\s*(?:[1-6])\b/i.test(lvl))
+          return isLang ? get('igbo_yoruba_nursery_6') : get('nursery_year1_6');
+        if (/\byear\s*(?:7|8|9|10)\b/i.test(lvl))
+          return isLang ? get('igbo_yoruba_year7_12') : get('year7_10');
+        if (/\byear\s*(?:11|12)\b/i.test(lvl))
+          return isLang ? get('igbo_yoruba_year7_12') : get('year11_12');
         return 0;
       }
 
