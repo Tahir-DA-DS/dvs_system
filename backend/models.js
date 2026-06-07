@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
-
+ 
 const { Schema } = mongoose;
-
+ 
 const TutorSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -11,7 +11,7 @@ const TutorSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+ 
 const StudentSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -20,7 +20,7 @@ const StudentSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+ 
 const ClassRecordSchema = new mongoose.Schema(
   {
     tutorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tutor', required: true },
@@ -48,14 +48,14 @@ const ClassRecordSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+ 
 // ── Indexes ──
 ClassRecordSchema.index({ startTime: 1 });
 ClassRecordSchema.index({ tutorId: 1 });
 ClassRecordSchema.index({ studentId: 1 });
 ClassRecordSchema.index({ tutorId: 1, startTime: 1 });
 ClassRecordSchema.index({ studentId: 1, startTime: 1 });
-
+ 
 const AdminActionLogSchema = new mongoose.Schema(
   {
     adminName: { type: String, required: true },
@@ -66,10 +66,10 @@ const AdminActionLogSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+ 
 AdminActionLogSchema.index({ tutorId: 1 });
 AdminActionLogSchema.index({ createdAt: 1 });
-
+ 
 // ── Rate Schema ──
 // Stores hourly rates per class group and special subjects.
 // key examples: 'nursery_year1_6', 'year7_10', 'year11_12', 'subject_igbo'
@@ -83,13 +83,13 @@ const RateSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+ 
 export const Tutor = mongoose.model('Tutor', TutorSchema);
 export const Student = mongoose.model('Student', StudentSchema);
 export const ClassRecord = mongoose.model('ClassRecord', ClassRecordSchema);
 export const AdminActionLog = mongoose.model('AdminActionLog', AdminActionLogSchema);
 export const Rate = mongoose.model('Rate', RateSchema);
-
+ 
 // ── Default rates (used as fallback if DB has no rates yet) ──
 const DEFAULT_RATES = {
   nursery_year1_6:       3800,
@@ -98,7 +98,7 @@ const DEFAULT_RATES = {
   igbo_yoruba_nursery_6: 4000,
   igbo_yoruba_year7_12:  4500,
 };
-
+ 
 // ── Seed default rates into DB if collection is empty ──
 export async function seedRatesIfEmpty() {
   const count = await Rate.countDocuments();
@@ -112,22 +112,22 @@ export async function seedRatesIfEmpty() {
   ]);
   console.log('✅ Default rates seeded');
 }
-
+ 
 // ── Get hourly rate from DB (async) ──
 const LANGUAGE_SUBJECTS = ['igbo', 'yoruba'];
-
+ 
 function isLanguageSubject(subject) {
   return subject && LANGUAGE_SUBJECTS.includes(String(subject).toLowerCase().trim());
 }
-
+ 
 export async function getHourlyRate(classLevel, subject) {
   const rates = await Rate.find();
   const rateMap = Object.fromEntries(rates.map(r => [r.key, r.ratePerHour]));
   const get = (key) => rateMap[key] ?? DEFAULT_RATES[key] ?? 0;
-
+ 
   const lvl = (classLevel || '').toLowerCase().trim();
   const isLang = isLanguageSubject(subject);
-
+ 
   // Nursery – Year 6
   if (lvl === 'nursery' || /year\s*(?:[1-6])/i.test(lvl)) {
     return isLang ? get('igbo_yoruba_nursery_6') : get('nursery_year1_6');
@@ -140,10 +140,10 @@ export async function getHourlyRate(classLevel, subject) {
   if (/year\s*(?:11|12)/i.test(lvl)) {
     return isLang ? get('igbo_yoruba_year7_12') : get('year11_12');
   }
-
+ 
   return 0;
 }
-
+ 
 // ── Sync version (fallback for non-async contexts) ──
 export function getHourlyRateForClassLevel(classLevel, subject) {
   const lvl = (classLevel || '').toLowerCase().trim();
@@ -153,7 +153,7 @@ export function getHourlyRateForClassLevel(classLevel, subject) {
   if (/year\s*(?:11|12)/i.test(lvl)) return isLang ? 4500 : 5000;
   return 0;
 }
-
+ 
 // ── Async payment calculation (uses DB rates) ──
 export async function calculatePaymentAmount(classLevel, subject, startTime, endTime) {
   const start = new Date(startTime);
