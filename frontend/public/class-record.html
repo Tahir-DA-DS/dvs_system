@@ -122,7 +122,8 @@
 
       function recalc() {
         const classLevel = document.getElementById('crClass').value;
-        const rate = getRate(classLevel);
+        const subject = document.getElementById('crSubject').value;
+        const rate = getRate(classLevel, subject);
         const start = document.getElementById('crStart').value;
         const end = document.getElementById('crEnd').value;
         let amount = 0;
@@ -147,7 +148,7 @@
 
       document.getElementById('crStart').addEventListener('change', checkLateSubmission);
       document.addEventListener('change', e => {
-        if (['crClass', 'crStart', 'crEnd'].includes(e.target.id)) recalc();
+        if (['crClass', 'crStart', 'crEnd', 'crSubject'].includes(e.target.id)) recalc();
       });
       document.addEventListener('input', e => {
         if (['crStart', 'crEnd'].includes(e.target.id)) recalc();
@@ -213,8 +214,8 @@
         }
 
         const classLevel = document.getElementById('crClass').value;
-        const rate = getRate(classLevel);
         const subject = document.getElementById('crSubject').value;
+        const rate = getRate(classLevel, subject);
         const startTime = start;
         const endTime = end;
         const minutes = (e.getTime() - s.getTime()) / 60000;
