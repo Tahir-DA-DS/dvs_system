@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Directors Report - DVS</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff; color: #000; }
+      .report-section { page-break-inside: avoid; }
+    }
+    .report-header { text-align: center; margin-bottom: 2rem; }
+    .report-header h1 { font-size: 1.8rem; margin-bottom: 0.3rem; }
+    .report-header p { color: #888; font-size: 0.9rem; }
+    .overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .overview-card { background: rgba(26,110,181,0.08); border: 1px solid rgba(26,110,181,0.2); border-radius: 10px; padding: 1rem; text-align: center; }
+    .overview-card .num { font-size: 1.8rem; font-weight: 700; color: #1a6eb5; }
+    .overview-card .lbl { font-size: 0.78rem; color: #888; margin-top: 4px; }
+    .report-section { margin-bottom: 2.5rem; }
+    .report-section h2 { font-size: 1.1rem; border-bottom: 2px solid #1a6eb5; padding-bottom: 0.4rem; margin-bottom: 1rem; color: #1a6eb5; }
+    .report-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-bottom: 1rem; }
+    .report-table th { background: #1a6eb5; color: #fff; padding: 8px 10px; text-align: left; font-weight: 600; }
+    .report-table td { padding: 7px 10px; border-bottom: 1px solid #222; vertical-align: top; }
+    .report-table tr:nth-child(even) td { background: rgba(255,255,255,0.03); }
+    .class-group { margin-bottom: 1.5rem; }
+    .class-group h3 { font-size: 0.95rem; color: #4a9ad4; margin-bottom: 0.5rem; font-weight: 600; }
+    .tutor-block { margin-bottom: 1.5rem; border: 1px solid #222; border-radius: 8px; overflow: hidden; }
+    .tutor-block-header { background: rgba(26,110,181,0.12); padding: 0.7rem 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+    .tutor-block-header strong { color: #fff; font-size: 0.95rem; }
+    .tutor-meta { font-size: 0.78rem; color: #888; }
+    .badge { display: inline-block; background: rgba(26,110,181,0.15); color: #4a9ad4; font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; margin: 2px; }
+    .controls { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: 1.5rem; }
+    .controls label { font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; }
+    .controls input, .controls select { padding: 6px 10px; border-radius: 6px; border: 1px solid #333; background: #1a2540; color: #fff; font-size: 0.85rem; }
+    .btn-group { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    #reportContent { display: none; }
+    .loading { text-align: center; padding: 2rem; color: #888; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <nav>
+        <a href="/">Home</a>
+        <a href="/admin.html">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="report-header no-print">
+      <h1>Directors Report</h1>
+      <p>Dynamic Virtual Solutions — Summary for Directors</p>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls no-print">
+      <label>From
+        <input type="date" id="repFrom" />
+      </label>
+      <label>To
+        <input type="date" id="repTo" />
+      </label>
+      <label>Filter by
+        <select id="repFilterBy">
+          <option value="startTime">Class Date</option>
+          <option value="createdAt">Registration Date</option>
+        </select>
+      </label>
+      <div class="btn-group">
+        <button onclick="generateReport()">Generate Report</button>
+        <button onclick="downloadPDF()" id="btnPDF" style="display:none;">Download PDF</button>
+        <button onclick="downloadExcel()" id="btnExcel" style="display:none;">Download Excel</button>
+      </div>
+    </div>
+
+    <div id="loadingMsg" class="loading" style="display:none;">Generating report...</div>
+    <div id="reportContent"></div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.hostname === 'localhost'
+      ? 'http://localhost:3000'
+      : 'https://dvs-system.onrender.com';
+
+    const getPass = () => localStorage.getItem('adminPass') || '';
+
+    let _reportData = null;
+
+    async function generateReport() {
+      const from = document.getElementById('repFrom').value;
+      const to = document.getElementById('repTo').value;
+      const filterBy = document.getElementById('repFilterBy').value;
+
+      const params = new URLSearchParams();
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+      params.set('filterBy', filterBy);
+
+      document.getElementById('loadingMsg').style.display = 'block';
+      document.getElementById('reportContent').style.display = 'none';
+      document.getElementById('btnPDF').style.display = 'none';
+      document.getElementById('btnExcel').style.display = 'none';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/report/directors?${params}`, {
+          headers: { 'x-admin-password': getPass() }
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          alert(err.message || 'Failed to generate report');
+          return;
+        }
+        _reportData = await res.json();
+        renderReport(_reportData);
+        document.getElementById('btnPDF').style.display = 'inline-block';
+        document.getElementById('btnExcel').style.display = 'inline-block';
+      } catch (err) {
+        alert('Network error: ' + err.message);
+      } finally {
+        document.getElementById('loadingMsg').style.display = 'none';
+      }
+    }
+
+    function renderReport(data) {
+      const { overview, byClass, byTutor, studentSummary } = data;
+      const dateLabel = overview.dateRange.from
+        ? `${overview.dateRange.from} to ${overview.dateRange.to || 'present'}`
+        : 'All time';
+
+      let html = `
+        <div class="report-header">
+          <h1>DVS Directors Report</h1>
+          <p>Dynamic Virtual Solutions &mdash; Period: ${dateLabel}</p>
+          <p style="font-size:0.8rem;color:#666;">Generated: ${new Date().toLocaleString()}</p>
+        </div>
+
+        <!-- Overview -->
+        <div class="report-section">
+          <h2>Overview</h2>
+          <div class="overview-grid">
+            <div class="overview-card"><div class="num">${overview.totalStudents}</div><div class="lbl">Active Students</div></div>
+            <div class="overview-card"><div class="num">${overview.totalTutors}</div><div class="lbl">Tutors</div></div>
+            <div class="overview-card"><div class="num">${overview.totalSessions}</div><div class="lbl">Sessions</div></div>
+            <div class="overview-card"><div class="num">${overview.totalHours}</div><div class="lbl">Total Hours</div></div>
+            <div class="overview-card"><div class="num">₦${overview.totalPayment.toLocaleString()}</div><div class="lbl">Total Payment</div></div>
+          </div>
+        </div>
+
+        <!-- Students by Class -->
+        <div class="report-section">
+          <h2>Students by Class Level</h2>
+          ${byClass.map(group => `
+            <div class="class-group">
+              <h3>${group.classLevel} (${group.students.length} student${group.students.length !== 1 ? 's' : ''})</h3>
+              <table class="report-table">
+                <thead><tr><th>Student Name</th><th>Tutor(s)</th><th>Subject(s)</th><th>Sessions</th></tr></thead>
+                <tbody>
+                  ${group.students.map(s => `
+                    <tr>
+                      <td>${s.name}</td>
+                      <td>${s.tutors.join(', ') || '—'}</td>
+                      <td>${s.subjects.join(', ') || '—'}</td>
+                      <td>${s.sessionCount}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Students by Tutor -->
+        <div class="report-section">
+          <h2>Students by Tutor</h2>
+          ${byTutor.map(t => `
+            <div class="tutor-block">
+              <div class="tutor-block-header">
+                <div>
+                  <strong>${t.tutorName}</strong>
+                  <div class="tutor-meta">${t.subjects.map(s => `<span class="badge">${s}</span>`).join('')}</div>
+                </div>
+                <div class="tutor-meta" style="text-align:right;">
+                  ${t.totalSessions} sessions &nbsp;|&nbsp; ₦${t.totalPayment.toLocaleString()}
+                </div>
+              </div>
+              <table class="report-table">
+                <thead><tr><th>Student</th><th>Class</th><th>Subject(s)</th><th>Sessions</th></tr></thead>
+                <tbody>
+                  ${t.students.map(s => `
+                    <tr>
+                      <td>${s.name}</td>
+                      <td>${s.classLevel}</td>
+                      <td>${s.subjects.join(', ')}</td>
+                      <td>${s.sessions}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Session Summary -->
+        <div class="report-section">
+          <h2>Session Summary per Student</h2>
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Class</th>
+                <th>Tutor(s)</th>
+                <th>Subject(s)</th>
+                <th>Sessions</th>
+                <th>Hours</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${studentSummary.map(s => `
+                <tr>
+                  <td>${s.name}</td>
+                  <td>${s.classLevel}</td>
+                  <td>${s.tutors.join(', ') || '—'}</td>
+                  <td>${s.subjects.join(', ') || '—'}</td>
+                  <td>${s.sessions}</td>
+                  <td>${s.hours}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      const content = document.getElementById('reportContent');
+      content.innerHTML = html;
+      content.style.display = 'block';
+    }
+
+    function downloadPDF() {
+      window.print();
+    }
+
+    function downloadExcel() {
+      if (!_reportData) return;
+      const { overview, byClass, byTutor, studentSummary } = _reportData;
+      const wb = XLSX.utils.book_new();
+
+      // Sheet 1: Overview
+      const overviewData = [
+        ['DVS Directors Report'],
+        ['Period', overview.dateRange.from ? `${overview.dateRange.from} to ${overview.dateRange.to || 'present'}` : 'All time'],
+        ['Generated', new Date().toLocaleString()],
+        [],
+        ['Metric', 'Value'],
+        ['Active Students', overview.totalStudents],
+        ['Tutors', overview.totalTutors],
+        ['Total Sessions', overview.totalSessions],
+        ['Total Hours', overview.totalHours],
+        ['Total Payment (₦)', overview.totalPayment],
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(overviewData), 'Overview');
+
+      // Sheet 2: Students by Class
+      const classRows = [['Class Level', 'Student Name', 'Tutor(s)', 'Subject(s)', 'Sessions']];
+      for (const group of byClass) {
+        for (const s of group.students) {
+          classRows.push([group.classLevel, s.name, s.tutors.join(', '), s.subjects.join(', '), s.sessionCount]);
+        }
+      }
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(classRows), 'By Class');
+
+      // Sheet 3: Students by Tutor
+      const tutorRows = [['Tutor', 'Student', 'Class', 'Subject(s)', 'Sessions', 'Tutor Total Payment (₦)']];
+      for (const t of byTutor) {
+        for (const s of t.students) {
+          tutorRows.push([t.tutorName, s.name, s.classLevel, s.subjects.join(', '), s.sessions, t.totalPayment]);
+        }
+      }
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(tutorRows), 'By Tutor');
+
+      // Sheet 4: Session Summary
+      const summaryRows = [['Student', 'Class', 'Tutor(s)', 'Subject(s)', 'Sessions', 'Hours']];
+      for (const s of studentSummary) {
+        summaryRows.push([s.name, s.classLevel, s.tutors.join(', '), s.subjects.join(', '), s.sessions, s.hours]);
+      }
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryRows), 'Session Summary');
+
+      const dateStr = overview.dateRange.from || 'all';
+      XLSX.writeFile(wb, `DVS-Directors-Report-${dateStr}.xlsx`);
+    }
+  </script>
+</body>
+</html>
