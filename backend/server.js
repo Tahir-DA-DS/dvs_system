@@ -9,8 +9,13 @@ import adminRouter from './admin.js';
 import ratesRouter from './rates.js';
 import reportRouter from './report.js';
 import {
-  Tutor, Student, AdminActionLog, ClassRecord, Rate,
-  migrateRates, loadRateCache, calculatePaymentAmount
+  Tutor,
+  Student,
+  AdminActionLog,
+  ClassRecord,
+  Rate,
+  seedRatesIfEmpty,
+  calculatePaymentAmount
 } from './models.js';
 
 const app = express();
@@ -80,8 +85,7 @@ mongoose
     await ClassRecord.syncIndexes();
     await AdminActionLog.syncIndexes();
 
-    await migrateRates();
-    await loadRateCache();
+  await seedRatesIfEmpty();
 
     console.log('✅ Indexes synchronized');
 
