@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
-
+ 
 const { Schema } = mongoose;
-
+ 
 const TutorSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -11,7 +11,7 @@ const TutorSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+ 
 const StudentSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -20,7 +20,7 @@ const StudentSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+ 
 const ClassRecordSchema = new mongoose.Schema(
   {
     tutorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tutor', required: true },
@@ -48,13 +48,14 @@ const ClassRecordSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+ 
+// ── Indexes ──
 ClassRecordSchema.index({ startTime: 1 });
 ClassRecordSchema.index({ tutorId: 1 });
 ClassRecordSchema.index({ studentId: 1 });
 ClassRecordSchema.index({ tutorId: 1, startTime: 1 });
 ClassRecordSchema.index({ studentId: 1, startTime: 1 });
-
+ 
 const AdminActionLogSchema = new mongoose.Schema(
   {
     adminName: { type: String, required: true },
@@ -65,94 +66,100 @@ const AdminActionLogSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+ 
 AdminActionLogSchema.index({ tutorId: 1 });
 AdminActionLogSchema.index({ createdAt: 1 });
-
+ 
+// ── Rate Schema ──
+// Stores hourly rates per class group and special subjects.
+// key examples: 'nursery_year1_6', 'year7_10', 'year11_12', 'subject_igbo'
+// Special subject rates (prefix 'subject_') override class-level rates.
 const RateSchema = new mongoose.Schema(
   {
-    key: { type: String, required: true, unique: true },
-    label: { type: String, required: true },
-    ratePerHour: { type: Number, required: true },
+    key: { type: String, required: true, unique: true },  // identifier
+    label: { type: String, required: true },              // display name
+    ratePerHour: { type: Number, required: true },        // ₦ per hour
     type: { type: String, enum: ['classLevel', 'subject'], default: 'classLevel' }
   },
   { timestamps: true }
 );
-
+ 
 export const Tutor = mongoose.model('Tutor', TutorSchema);
 export const Student = mongoose.model('Student', StudentSchema);
 export const ClassRecord = mongoose.model('ClassRecord', ClassRecordSchema);
 export const AdminActionLog = mongoose.model('AdminActionLog', AdminActionLogSchema);
 export const Rate = mongoose.model('Rate', RateSchema);
-
-// ── In-memory rate cache ──
-// Loaded once on startup from DB, falls back to hardcoded defaults.
-// calculatePaymentAmount uses this — no DB call per submission.
-let _rateCache = {
+ 
+// ── Default rates (used as fallback if DB has no rates yet) ──
+const DEFAULT_RATES = {
   nursery_year1_6:       3800,
   year7_10:              4300,
   year11_12:             5000,
   igbo_yoruba_nursery_6: 4000,
   igbo_yoruba_year7_12:  4500,
 };
-
-export async function loadRateCache() {
-  try {
-    const rates = await Rate.find();
-    if (rates.length > 0) {
-      rates.forEach(r => { _rateCache[r.key] = r.ratePerHour; });
-    }
-    console.log('✅ Rate cache loaded:', _rateCache);
-  } catch (err) {
-    console.warn('⚠️  Could not load rates from DB, using defaults:', err.message);
-  }
+ 
+// ── Seed default rates into DB if collection is empty ──
+export async function seedRatesIfEmpty() {
+  const count = await Rate.countDocuments();
+  if (count > 0) return;
+  await Rate.insertMany([
+    { key: 'nursery_year1_6',         label: 'Nursery – Year 6 (General)',          ratePerHour: 3800, type: 'classLevel' },
+    { key: 'year7_10',                label: 'Year 7 – Year 10 (General)',           ratePerHour: 4300, type: 'classLevel' },
+    { key: 'year11_12',               label: 'Year 11 – Year 12 (General)',          ratePerHour: 5000, type: 'classLevel' },
+    { key: 'igbo_yoruba_nursery_6',   label: 'Igbo / Yoruba – Nursery to Year 6',   ratePerHour: 4000, type: 'subject' },
+    { key: 'igbo_yoruba_year7_12',    label: 'Igbo / Yoruba – Year 7 to Year 12',   ratePerHour: 4500, type: 'subject' },
+  ]);
+  console.log('✅ Default rates seeded');
 }
-
-export function refreshRateCache(key, value) {
-  _rateCache[key] = value;
+ 
+// ── Get hourly rate from DB (async) ──
+const LANGUAGE_SUBJECTS = ['igbo', 'yoruba'];
+ 
+function isLanguageSubject(subject) {
+  return subject && LANGUAGE_SUBJECTS.includes(String(subject).toLowerCase().trim());
 }
-
-// ── Core rate lookup — checks higher years first to avoid regex false matches ──
-export function getRateFromCache(classLevel, subject) {
+ 
+export async function getHourlyRate(classLevel, subject) {
+  const rates = await Rate.find();
+  const rateMap = Object.fromEntries(rates.map(r => [r.key, r.ratePerHour]));
+  const get = (key) => rateMap[key] ?? DEFAULT_RATES[key] ?? 0;
+ 
   const lvl = (classLevel || '').toLowerCase().trim();
-  const isLang = subject && ['igbo', 'yoruba'].includes(String(subject).toLowerCase().trim());
-
-  if (/year\s*(11|12)\b/i.test(lvl))
-    return isLang ? (_rateCache.igbo_yoruba_year7_12 ?? 4500) : (_rateCache.year11_12 ?? 5000);
-  if (/year\s*(7|8|9|10)\b/i.test(lvl))
-    return isLang ? (_rateCache.igbo_yoruba_year7_12 ?? 4500) : (_rateCache.year7_10 ?? 4300);
-  if (lvl === 'nursery' || /year\s*([1-6])\b/i.test(lvl))
-    return isLang ? (_rateCache.igbo_yoruba_nursery_6 ?? 4000) : (_rateCache.nursery_year1_6 ?? 3800);
-
+  const isLang = isLanguageSubject(subject);
+ 
+  // Nursery – Year 6
+  if (lvl === 'nursery' || /year\s*(?:[1-6])/i.test(lvl)) {
+    return isLang ? get('igbo_yoruba_nursery_6') : get('nursery_year1_6');
+  }
+  // Year 7 – Year 10
+  if (/year\s*(?:7|8|9|10)/i.test(lvl)) {
+    return isLang ? get('igbo_yoruba_year7_12') : get('year7_10');
+  }
+  // Year 11 – Year 12
+  if (/year\s*(?:11|12)/i.test(lvl)) {
+    return isLang ? get('igbo_yoruba_year7_12') : get('year11_12');
+  }
+ 
   return 0;
 }
-
+ 
+// ── Sync version (fallback for non-async contexts) ──
 export function getHourlyRateForClassLevel(classLevel, subject) {
-  return getRateFromCache(classLevel, subject);
+  const lvl = (classLevel || '').toLowerCase().trim();
+  const isLang = subject && ['igbo', 'yoruba'].includes(String(subject).toLowerCase().trim());
+  if (lvl === 'nursery' || /year\s*(?:[1-6])/i.test(lvl)) return isLang ? 4000 : 3800;
+  if (/year\s*(?:7|8|9|10)/i.test(lvl)) return isLang ? 4500 : 4300;
+  if (/year\s*(?:11|12)/i.test(lvl)) return isLang ? 4500 : 5000;
+  return 0;
 }
-
-// ── Sync payment calculation — uses in-memory cache, no DB call ──
-export function calculatePaymentAmount(classLevel, subject, startTime, endTime) {
+ 
+// ── Async payment calculation (uses DB rates) ──
+export async function calculatePaymentAmount(classLevel, subject, startTime, endTime) {
   const start = new Date(startTime);
   const end = new Date(endTime);
   if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return 0;
-  const rate = getRateFromCache(classLevel, subject);
+  const rate = await getHourlyRate(classLevel, subject);
   const minutes = (end.getTime() - start.getTime()) / 60000;
   return Math.round(rate * (minutes / 60));
-}
-
-// ── Seed / migrate rates in DB on startup ──
-export async function migrateRates() {
-  const DEFAULT_RATES = [
-    { key: 'nursery_year1_6',       label: 'Nursery – Year 6 (General)',        ratePerHour: 3800, type: 'classLevel' },
-    { key: 'year7_10',              label: 'Year 7 – Year 10 (General)',         ratePerHour: 4300, type: 'classLevel' },
-    { key: 'year11_12',             label: 'Year 11 – Year 12 (General)',        ratePerHour: 5000, type: 'classLevel' },
-    { key: 'igbo_yoruba_nursery_6', label: 'Igbo / Yoruba – Nursery to Year 6', ratePerHour: 4000, type: 'subject' },
-    { key: 'igbo_yoruba_year7_12',  label: 'Igbo / Yoruba – Year 7 to Year 12', ratePerHour: 4500, type: 'subject' },
-  ];
-  await Rate.deleteOne({ key: 'subject_igbo' });
-  for (const r of DEFAULT_RATES) {
-    await Rate.updateOne({ key: r.key }, { $setOnInsert: r }, { upsert: true });
-  }
-  console.log('✅ Rates migrated');
 }
