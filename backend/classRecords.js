@@ -154,6 +154,8 @@ router.post("/late-submission", async (req, res) => {
       comment,
     });
 
+    console.log("Saved payment:", record.paymentAmount);
+
     res.status(201).json({
       message: "Late class record submitted successfully. Awaiting admin approval.",
       recordId: record._id,

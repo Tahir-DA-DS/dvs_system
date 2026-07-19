@@ -155,11 +155,23 @@ export function getHourlyRateForClassLevel(classLevel, subject) {
 }
  
 // ── Async payment calculation (uses DB rates) ──
+
 export async function calculatePaymentAmount(classLevel, subject, startTime, endTime) {
   const start = new Date(startTime);
   const end = new Date(endTime);
-  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return 0;
+
   const rate = await getHourlyRate(classLevel, subject);
   const minutes = (end.getTime() - start.getTime()) / 60000;
-  return Math.round(rate * (minutes / 60));
+  const payment = Math.round(rate * (minutes / 60));
+
+  console.log("===== PAYMENT DEBUG =====");
+  console.log({
+    classLevel,
+    subject,
+    rate,
+    minutes,
+    payment
+  });
+
+  return payment;
 }
