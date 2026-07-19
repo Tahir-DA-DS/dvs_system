@@ -55,22 +55,44 @@ app.use('/api/report', reportRouter);
 // ── One-time fix: correct ₦0 payment records ──
 app.get('/admin/fix-payments', async (req, res) => {
   const pass = req.headers['x-admin-password'] || req.query.p;
-  if (pass !== (process.env.ADMIN_PASSWORD || 'dvsAdmin0023'))
+
+  if (pass !== (process.env.ADMIN_PASSWORD || 'dvsAdmin0023')) {
     return res.status(401).json({ message: 'Unauthorized' });
+  }
+
   try {
     const records = await ClassRecord.find({ paymentAmount: 0 });
     let fixed = 0;
+
     for (const record of records) {
-      const paymentAmount = calculatePaymentAmount(
-        record.classLevel, record.subject, record.startTime, record.endTime
+      const paymentAmount = await calculatePaymentAmount(
+        record.classLevel,
+        record.subject,
+        record.startTime,
+        record.endTime
       );
+
+      console.log(
+        record.classLevel,
+        record.subject,
+        paymentAmount
+      );
+
       if (paymentAmount > 0) {
-        await ClassRecord.updateOne({ _id: record._id }, { $set: { paymentAmount } });
+        await ClassRecord.updateOne(
+          { _id: record._id },
+          { $set: { paymentAmount } }
+        );
         fixed++;
       }
     }
-    res.json({ message: `Done — ${fixed} of ${records.length} records fixed` });
+
+    res.json({
+      message: `Done — ${fixed} of ${records.length} records fixed`
+    });
+
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: err.message });
   }
 });
