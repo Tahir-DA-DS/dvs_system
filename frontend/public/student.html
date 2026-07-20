@@ -118,6 +118,7 @@
       async function loadStudents() {
         const res = await fetch(api('/students'));
         const students = await res.json();
+        window._studentsData = students;
         const list = document.getElementById('studentList');
         if (!students.length) { list.innerHTML = '<p class="muted">No students registered yet.</p>'; return; }
         list.innerHTML = `
@@ -127,16 +128,17 @@
                 <th style="text-align:left; padding:8px; border-bottom:1px solid #333;">Name</th>
                 <th style="text-align:left; padding:8px; border-bottom:1px solid #333;">Class</th>
                 <th style="text-align:left; padding:8px; border-bottom:1px solid #333;">Subjects</th>
-                <th style="text-align:left; padding:8px; border-bottom:1px solid #333;">Action</th>
+                <th style="text-align:left; padding:8px; border-bottom:1px solid #333;">Actions</th>
               </tr>
             </thead>
             <tbody>
-              ${students.map(s => `
+              ${students.map((s, i) => `
                 <tr>
                   <td style="padding:8px; border-bottom:1px solid #222;">${s.name}</td>
                   <td style="padding:8px; border-bottom:1px solid #222;">${s.classLevel}</td>
                   <td style="padding:8px; border-bottom:1px solid #222;">${(s.enrolledSubjects || []).join(', ') || '—'}</td>
-                  <td style="padding:8px; border-bottom:1px solid #222;">
+                  <td style="padding:8px; border-bottom:1px solid #222; display:flex; gap:6px;">
+                    <button onclick="openEditStudentModal(${i})" class="small">Edit</button>
                     <button onclick="deleteStudent('${s._id}', '${s.name}')" class="small danger">Delete</button>
                   </td>
                 </tr>
@@ -146,8 +148,109 @@
         `;
       }
 
+      function openEditStudentModal(index) {
+        const s = window._studentsData[index];
+        if (!s) return;
+        document.getElementById('editStudentId').value = s._id;
+        document.getElementById('editStudentName').value = s.name;
+        document.getElementById('editStudentMsg').textContent = '';
+
+        // Populate class options
+        const classSel = document.getElementById('editStudentClass');
+        classSel.innerHTML = ['Nursery', ...Array.from({ length: 12 }, (_, i) => `Year ${i + 1}`)]
+          .map(c => `<option${c === s.classLevel ? ' selected' : ''}>${c}</option>`).join('');
+
+        // Set selected subjects
+        const subjectSel = document.getElementById('editStudentSubjects');
+        Array.from(subjectSel.options).forEach(opt => {
+          opt.selected = (s.enrolledSubjects || []).includes(opt.value);
+        });
+
+        document.getElementById('editStudentModal').style.display = 'flex';
+      }
+
+      function closeEditStudentModal() {
+        document.getElementById('editStudentModal').style.display = 'none';
+      }
+
+      async function saveStudentEdit() {
+        const id = document.getElementById('editStudentId').value;
+        const name = document.getElementById('editStudentName').value.trim();
+        const classLevel = document.getElementById('editStudentClass').value;
+        const enrolledSubjects = Array.from(
+          document.getElementById('editStudentSubjects').selectedOptions
+        ).map(o => o.value);
+        const msg = document.getElementById('editStudentMsg');
+
+        if (!name || !classLevel) {
+          msg.textContent = 'Name and class level are required';
+          msg.style.color = 'red';
+          return;
+        }
+
+        const res = await fetch(api(`/students/${id}`), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, classLevel, enrolledSubjects })
+        });
+        const out = await res.json();
+        if (res.ok) {
+          closeEditStudentModal();
+          document.getElementById('studentMsg').textContent = `"${name}" updated successfully`;
+          document.getElementById('studentMsg').style.color = '';
+          loadStudents();
+        } else {
+          msg.textContent = out.message;
+          msg.style.color = 'red';
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const modal = document.getElementById('editStudentModal');
+        if (modal) modal.addEventListener('click', e => {
+          if (e.target.id === 'editStudentModal') closeEditStudentModal();
+        });
+      });
+
       loadClassOptions();
       loadStudents();
     </script>
+
+    <!-- Edit Student Modal -->
+    <div id="editStudentModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:999; align-items:center; justify-content:center;">
+      <div style="background:#1a2540; border:1px solid #2a3a5a; border-radius:12px; padding:2rem; width:90%; max-width:480px; max-height:90vh; overflow-y:auto;">
+        <h3 style="margin-bottom:1rem; color:#fff;">Edit Student</h3>
+        <input type="hidden" id="editStudentId" />
+        <label style="display:block; margin-bottom:0.5rem;">Student Name
+          <input id="editStudentName" style="width:100%; margin-top:4px;" />
+        </label>
+        <label style="display:block; margin-bottom:0.5rem; margin-top:0.8rem;">Class Level
+          <select id="editStudentClass" style="width:100%; margin-top:4px;"></select>
+        </label>
+        <label style="display:block; margin-bottom:0.5rem; margin-top:0.8rem;">Enrolled Subjects (Ctrl/Cmd + Click to multi-select)
+          <select id="editStudentSubjects" multiple size="8" style="width:100%; margin-top:4px;">
+            <option>Mathematics</option>
+            <option>English</option>
+            <option>Physics</option>
+            <option>Chemistry</option>
+            <option>Biology</option>
+            <option>Economics</option>
+            <option>Government</option>
+            <option>Literature</option>
+            <option>Computer Science</option>
+            <option>Coding</option>
+            <option>French</option>
+            <option>Science</option>
+            <option>Igbo</option>
+            <option>Yoruba</option>
+          </select>
+        </label>
+        <div id="editStudentMsg" style="margin-top:0.5rem; font-size:0.85rem;"></div>
+        <div style="display:flex; gap:0.8rem; margin-top:1.2rem;">
+          <button onclick="saveStudentEdit()">Save Changes</button>
+          <button onclick="closeEditStudentModal()" class="muted">Cancel</button>
+        </div>
+      </div>
+    </div>
   </body>
 </html>
