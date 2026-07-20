@@ -17,9 +17,9 @@ const router = Router();
 // ── Create class record (same-day) ──
 router.post("/", async (req, res) => {
   try {
-    const { tutorId, studentId, classLevel, subject, topic, startTime, endTime, comment } = req.body;
+    const { tutorId, studentId, subject, topic, startTime, endTime, comment } = req.body;
 
-    if (!tutorId || !studentId || !classLevel || !subject || !topic || !startTime || !endTime)
+    if (!tutorId || !studentId || !subject || !topic || !startTime || !endTime)
       return res.status(400).json({ message: "Missing required fields" });
 
     const tutor = await Tutor.findById(tutorId);
@@ -27,8 +27,15 @@ router.post("/", async (req, res) => {
     if (!tutor || !student)
       return res.status(404).json({ message: "Tutor or Student not found" });
 
+    const classLevel = student.classLevel;
+
     if (!tutor.subjects.includes(subject))
       return res.status(400).json({ message: "Selected subject is not in tutor's subjects" });
+
+    if (!student.enrolledSubjects.includes(subject))
+  return res.status(400).json({
+    message: "Student is not enrolled for the selected subject"
+  });
 
     const start = new Date(startTime);
     const end = new Date(endTime);
@@ -56,13 +63,27 @@ router.post("/", async (req, res) => {
     if (lessonDate !== submitDate)
       return res.status(400).json({ message: "Class records must be submitted the same day as the lesson. Please use /late-submission for late submissions." });
 
-    const paymentAmount = await calculatePaymentAmount(classLevel, subject, start, end);
-    const record = await ClassRecord.create({
-      tutorId, studentId, classLevel, subject, topic,
-      startTime: start, endTime: end,
-      dateSubmitted: now, paymentAmount,
-      status: "Valid", comment,
-    });
+  const paymentAmount = await calculatePaymentAmount(
+  student.classLevel,
+  subject,
+  start,
+  end
+);
+
+const record = await ClassRecord.create({
+  tutorId,
+  studentId,
+  classLevel: student.classLevel,
+  subject,
+  topic,
+  startTime: start,
+  endTime: end,
+  dateSubmitted: now,
+  paymentAmount,
+  status: "Valid",
+  comment,
+});
+
 
     res.status(201).json({ message: "Class record created successfully", recordId: record._id });
   } catch (err) {
@@ -108,9 +129,9 @@ router.get("/", async (req, res) => {
 // ── Late submission ──
 router.post("/late-submission", async (req, res) => {
   try {
-    const { tutorId, studentId, classLevel, subject, topic, startTime, endTime, comment, reason } = req.body;
+    const { tutorId, studentId, subject, topic, startTime, endTime, comment, reason } = req.body;
 
-    if (!tutorId || !studentId || !classLevel || !subject || !topic || !startTime || !endTime)
+    if (!tutorId || !studentId || !subject || !topic || !startTime || !endTime)
       return res.status(400).json({ message: "Missing required fields" });
 
     if (!reason)
@@ -121,8 +142,15 @@ router.post("/late-submission", async (req, res) => {
     if (!tutor || !student)
       return res.status(404).json({ message: "Tutor or Student not found" });
 
+    const classLevel = student.classLevel;
+
     if (!tutor.subjects.includes(subject))
       return res.status(400).json({ message: "Selected subject is not in tutor's subjects" });
+
+    if (!student.enrolledSubjects.includes(subject))
+  return res.status(400).json({
+    message: "Student is not enrolled for the selected subject"
+  });
 
     const start = new Date(startTime);
     const end = new Date(endTime);
@@ -144,9 +172,9 @@ router.post("/late-submission", async (req, res) => {
     if (overlapping)
       return res.status(400).json({ message: "Duplicate or overlapping class record already exists." });
 
-    const paymentAmount = await calculatePaymentAmount(classLevel, subject, start, end);
+    const paymentAmount = await calculatePaymentAmount(student.classLevel, subject, start, end);
     const record = await ClassRecord.create({
-      tutorId, studentId, classLevel, subject, topic,
+      tutorId, studentId, classLevel: student.classLevel, subject, topic,
       startTime: start, endTime: end,
       dateSubmitted: new Date(), paymentAmount,
       status: "Pending Approval",
@@ -154,7 +182,7 @@ router.post("/late-submission", async (req, res) => {
       comment,
     });
 
-    console.log("Saved payment:", record.paymentAmount);
+    // console.log("Saved payment:", record.paymentAmount);
 
     res.status(201).json({
       message: "Late class record submitted successfully. Awaiting admin approval.",
@@ -238,7 +266,7 @@ router.delete("/:id", async (req, res) => {
 // ── Update record ──
 router.put("/:id", async (req, res) => {
   try {
-    const { tutorId, studentId, classLevel, subject, topic, startTime, endTime, comment } = req.body;
+    const { tutorId, studentId, subject, topic, startTime, endTime, comment } = req.body;
     const record = await ClassRecord.findById(req.params.id);
     if (!record) return res.status(404).json({ message: "Record not found" });
 
@@ -250,10 +278,15 @@ router.put("/:id", async (req, res) => {
     if (!tutor.subjects.includes(subject))
       return res.status(400).json({ message: "Selected subject is not in tutor's subjects" });
 
-    const paymentAmount = await calculatePaymentAmount(classLevel, subject, new Date(startTime), new Date(endTime));
+    if (!student.enrolledSubjects.includes(subject))
+  return res.status(400).json({
+    message: "Student is not enrolled for the selected subject"
+  });
+
+    const paymentAmount = await calculatePaymentAmount(student.classLevel, subject, new Date(startTime), new Date(endTime));
 
     Object.assign(record, {
-      tutorId, studentId, classLevel, subject, topic,
+      tutorId, studentId,  classLevel: student.classLevel, subject, topic,
       startTime: new Date(startTime),
       endTime: new Date(endTime),
       paymentAmount, comment,

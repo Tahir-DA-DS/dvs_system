@@ -16,37 +16,81 @@
           <a href="/">Home</a>
           <a href="/tutor.html">Tutor Sign-Up</a>
           <a href="/student.html">Register Student</a>
-          <a href="/admin.html">Admin</a>
+          <a href="/admin-login.html">Admin</a>
         </nav>
       </div>
     </header>
+
     <div class="container">
       <h1>Class Record</h1>
       <section>
-        <label>Tutor<select id="crTutor"></select></label>
-        <label>Student<select id="crStudent"></select></label>
-        <label>Class<select id="crClass"></select></label>
-        <label>Subject<select id="crSubject"></select></label>
-        <label>Topic<input id="crTopic" /></label>
-        <div class="row">
-          <label style="flex: 1">Start Time<input type="datetime-local" id="crStart" /></label>
-          <label style="flex: 1">End Time<input type="datetime-local" id="crEnd" /></label>
+
+        <!-- Step 1: Tutor selection -->
+        <label>Tutor
+          <select id="crTutor">
+            <option value="">Select Tutor</option>
+          </select>
+        </label>
+
+        <!-- Step 2: Student selection -->
+        <label>Student
+          <select id="crStudent">
+            <option value="">Select Student</option>
+          </select>
+        </label>
+
+        <!-- Auto-populated student details (read-only) -->
+        <div id="studentDetails" style="display:none; background:rgba(26,110,181,0.08); border:1px solid rgba(26,110,181,0.2); border-radius:8px; padding:1rem; margin:0.8rem 0;">
+          <p style="font-size:0.85rem; color:#8a9ab8; margin-bottom:0.5rem;">Student Details (auto-filled)</p>
+          <div style="display:flex; gap:2rem; flex-wrap:wrap;">
+            <div><span style="color:#8a9ab8; font-size:0.8rem;">Name</span><div id="sdName" style="font-weight:600;"></div></div>
+            <div><span style="color:#8a9ab8; font-size:0.8rem;">Class Level</span><div id="sdClass" style="font-weight:600;"></div></div>
+            <div><span style="color:#8a9ab8; font-size:0.8rem;">Enrolled Subjects</span><div id="sdSubjects" style="font-weight:600;"></div></div>
+          </div>
         </div>
+
+        <!-- Step 3: Subject (filtered to intersection of tutor subjects + student subjects) -->
+        <label>Subject
+          <select id="crSubject">
+            <option value="">Select tutor and student first</option>
+          </select>
+        </label>
+
+        <!-- Step 4: Topic -->
+        <label>Topic
+          <input id="crTopic" placeholder="Enter topic covered" />
+        </label>
+
+        <!-- Step 5: Date & Time -->
+        <div class="row">
+          <label style="flex:1">Start Time
+            <input type="datetime-local" id="crStart" />
+          </label>
+          <label style="flex:1">End Time
+            <input type="datetime-local" id="crEnd" />
+          </label>
+        </div>
+
+        <!-- Comment -->
         <label>Comment (optional)
           <textarea id="crComment"></textarea>
         </label>
-        <div id="lateSubmissionForm" style="display: none">
+
+        <!-- Late submission reason (shown if date is not today) -->
+        <div id="lateSubmissionForm" style="display:none;">
           <h3>Late Submission</h3>
-          <label>
-            Reason for late submission:
+          <label>Reason for late submission:
             <textarea id="crLateReason" required></textarea>
           </label>
           <div class="muted">Note: Late submissions require admin approval</div>
         </div>
+
+        <!-- Payment preview -->
         <div>
           Payment: <span id="crPayment">₦0</span>
           <span class="muted" id="crRate"></span>
         </div>
+
         <div>
           <button id="crSubmit" class="submit-btn">Submit</button>
           <span id="crMsg" class="muted-inline"></span>
@@ -62,29 +106,8 @@
 
       const api = (path) => `${API_BASE}/api${path}`;
 
-      async function loadDropdowns() {
-        const [tutors, students] = await Promise.all([
-          fetch(api('/tutors')).then(r => r.json()),
-          fetch(api('/students')).then(r => r.json()),
-        ]);
-        const tutorSel = document.getElementById('crTutor');
-        tutorSel.innerHTML =
-          '<option value="">Select Tutor</option>' +
-          tutors.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
-
-        const studentSel = document.getElementById('crStudent');
-        studentSel.innerHTML =
-          '<option value="">Select Student</option>' +
-          students.map(s => `<option value="${s._id}">${s.name}</option>`).join('');
-
-        const classSel = document.getElementById('crClass');
-        classSel.innerHTML = ['Nursery', ...Array.from({ length: 12 }, (_, i) => `Year ${i + 1}`)]
-          .map(c => `<option>${c}</option>`).join('');
-      }
-
-      // Live rates loaded from DB
+      // ── Rate cache ──
       let _ratesCache = null;
-
       async function fetchRates() {
         if (_ratesCache) return _ratesCache;
         try {
@@ -97,33 +120,101 @@
       function getRateFromCache(classLevel, subject) {
         const rates = _ratesCache;
         const rateMap = rates ? Object.fromEntries(rates.map(r => [r.key, r.ratePerHour])) : {};
-        const fallback = {
-          nursery_year1_6:       3800,
-          year7_10:              4300,
-          year11_12:             5000,
-          igbo_yoruba_nursery_6: 4000,
-          igbo_yoruba_year7_12:  4500,
-        };
+        const fallback = { nursery_year1_6: 3800, year7_10: 4300, year11_12: 5000, igbo_yoruba_nursery_6: 4000, igbo_yoruba_year7_12: 4500 };
         const get = (key) => rateMap[key] ?? fallback[key] ?? 0;
         const isLang = subject && ['igbo', 'yoruba'].includes(subject.toLowerCase().trim());
         const lvl = (classLevel || '').toLowerCase().trim();
-        if (lvl === 'nursery' || /\byear\s*(?:[1-6])\b/i.test(lvl))
-          return isLang ? get('igbo_yoruba_nursery_6') : get('nursery_year1_6');
-        if (/\byear\s*(?:7|8|9|10)\b/i.test(lvl))
-          return isLang ? get('igbo_yoruba_year7_12') : get('year7_10');
-        if (/\byear\s*(?:11|12)\b/i.test(lvl))
-          return isLang ? get('igbo_yoruba_year7_12') : get('year11_12');
+        if (/year\s*(11|12)\b/i.test(lvl)) return isLang ? get('igbo_yoruba_year7_12') : get('year11_12');
+        if (/year\s*(7|8|9|10)\b/i.test(lvl)) return isLang ? get('igbo_yoruba_year7_12') : get('year7_10');
+        if (lvl === 'nursery' || /year\s*([1-6])\b/i.test(lvl)) return isLang ? get('igbo_yoruba_nursery_6') : get('nursery_year1_6');
         return 0;
       }
 
-      function getRate(classLevel, subject) {
-        return getRateFromCache(classLevel, subject);
+      // ── Store loaded data ──
+      let _tutors = [];
+      let _students = [];
+      let _selectedStudent = null;
+
+      // ── Load tutors and students on page load ──
+      async function loadDropdowns() {
+        const [tutorsRes, studentsRes] = await Promise.all([
+          fetch(api('/tutors')),
+          fetch(api('/students'))
+        ]);
+        _tutors = await tutorsRes.json();
+        _students = await studentsRes.json();
+
+        const tutorSel = document.getElementById('crTutor');
+        tutorSel.innerHTML = '<option value="">Select Tutor</option>' +
+          _tutors.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
+
+        const studentSel = document.getElementById('crStudent');
+        studentSel.innerHTML = '<option value="">Select Student</option>' +
+          _students.map(s => `<option value="${s._id}">${s.name}</option>`).join('');
       }
 
+      // ── When student is selected — populate details and update subject list ──
+      function onStudentChange() {
+        const studentId = document.getElementById('crStudent').value;
+        _selectedStudent = _students.find(s => s._id === studentId) || null;
+
+        if (!_selectedStudent) {
+          document.getElementById('studentDetails').style.display = 'none';
+          updateSubjectDropdown();
+          recalc();
+          return;
+        }
+
+        // Show auto-populated details
+        document.getElementById('sdName').textContent = _selectedStudent.name;
+        document.getElementById('sdClass').textContent = _selectedStudent.classLevel;
+        document.getElementById('sdSubjects').textContent =
+          (_selectedStudent.enrolledSubjects || []).join(', ') || '—';
+        document.getElementById('studentDetails').style.display = 'block';
+
+        updateSubjectDropdown();
+        recalc();
+      }
+
+      // ── When tutor is selected — update subject list ──
+      function onTutorChange() {
+        updateSubjectDropdown();
+        recalc();
+      }
+
+      // ── Subject dropdown = intersection of tutor subjects + student enrolled subjects ──
+      function updateSubjectDropdown() {
+        const tutorId = document.getElementById('crTutor').value;
+        const subjectSel = document.getElementById('crSubject');
+
+        const tutor = _tutors.find(t => t._id === tutorId);
+        const tutorSubjects = tutor ? tutor.subjects : [];
+        const studentSubjects = _selectedStudent ? (_selectedStudent.enrolledSubjects || []) : [];
+
+        // Intersection — subjects both tutor teaches AND student is enrolled in
+        let intersection = [];
+        if (tutorId && _selectedStudent) {
+          intersection = tutorSubjects.filter(s =>
+            studentSubjects.some(ss => ss.toLowerCase() === s.toLowerCase())
+          );
+        } else if (tutorId) {
+          intersection = tutorSubjects;
+        }
+
+        if (!intersection.length) {
+          subjectSel.innerHTML = '<option value="">No matching subjects</option>';
+        } else {
+          subjectSel.innerHTML = '<option value="">Select Subject</option>' +
+            intersection.map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+        recalc();
+      }
+
+      // ── Payment preview ──
       function recalc() {
-        const classLevel = document.getElementById('crClass').value;
         const subject = document.getElementById('crSubject').value;
-        const rate = getRate(classLevel, subject);
+        const classLevel = _selectedStudent ? _selectedStudent.classLevel : '';
+        const rate = getRateFromCache(classLevel, subject);
         const start = document.getElementById('crStart').value;
         const end = document.getElementById('crEnd').value;
         let amount = 0;
@@ -132,40 +223,21 @@
           const e = new Date(end);
           if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && e > s) {
             const minutes = (e.getTime() - s.getTime()) / 60000;
-            const hours = minutes / 60;
-            amount = Math.round(rate * hours);
+            amount = Math.round(rate * (minutes / 60));
           }
         }
         document.getElementById('crPayment').textContent = `₦${amount.toLocaleString()}`;
         document.getElementById('crRate').textContent = rate ? `(₦${rate.toLocaleString()} / hr)` : '';
       }
 
+      // ── Late submission check ──
       function checkLateSubmission() {
         const startTime = document.getElementById('crStart').value;
-        const isLate = dayjs(startTime).format('YYYY-MM-DD') !== dayjs().format('YYYY-MM-DD');
+        const isLate = startTime && dayjs(startTime).format('YYYY-MM-DD') !== dayjs().format('YYYY-MM-DD');
         document.getElementById('lateSubmissionForm').style.display = isLate ? 'block' : 'none';
       }
 
-      document.getElementById('crStart').addEventListener('change', checkLateSubmission);
-      document.addEventListener('change', e => {
-        if (['crClass', 'crStart', 'crEnd', 'crSubject'].includes(e.target.id)) recalc();
-      });
-      document.addEventListener('input', e => {
-        if (['crStart', 'crEnd'].includes(e.target.id)) recalc();
-      });
-      document.addEventListener('change', async e => {
-        if (e.target && e.target.id === 'crTutor') {
-          const tutorId = document.getElementById('crTutor').value;
-          const subjectSel = document.getElementById('crSubject');
-          if (!tutorId) { subjectSel.innerHTML = ''; return; }
-          const tutors = await fetch(api('/tutors')).then(r => r.json());
-          const tutor = tutors.find(t => t._id === tutorId);
-          subjectSel.innerHTML = tutor
-            ? tutor.subjects.map(s => `<option>${s}</option>`).join('')
-            : '';
-        }
-      });
-
+      // ── Toast ──
       function showToast(msg, type = 'success', timeout = 5000) {
         const t = document.getElementById('toast');
         if (!t) return;
@@ -175,6 +247,7 @@
         if (timeout > 0) t._hideTimer = setTimeout(() => t.classList.remove('show'), timeout);
       }
 
+      // ── Submit state ──
       function setSubmitState(disabled, text) {
         const btn = document.getElementById('crSubmit');
         if (!btn) return;
@@ -189,71 +262,62 @@
         }
       }
 
-      document.addEventListener('DOMContentLoaded', () => {
-        const btn = document.getElementById('crSubmit');
-        if (btn) btn.addEventListener('click', e => { e.preventDefault(); createClassRecord(); });
-      });
-
+      // ── Submit ──
       async function createClassRecord() {
         const btn = document.getElementById('crSubmit');
         if (btn && btn.disabled) return;
         setSubmitState(true, 'Submitting...');
         document.getElementById('crMsg').textContent = '';
 
+        const tutorId = document.getElementById('crTutor').value;
+        const studentId = document.getElementById('crStudent').value;
+        const subject = document.getElementById('crSubject').value;
+        const topic = document.getElementById('crTopic').value.trim();
         const start = document.getElementById('crStart').value;
         const end = document.getElementById('crEnd').value;
+        const comment = document.getElementById('crComment').value;
+
+        // Basic validation
+        if (!tutorId || !studentId) {
+          const msg = 'Please select a tutor and student.';
+          document.getElementById('crMsg').textContent = msg;
+          showToast(msg, 'error'); setSubmitState(false); return;
+        }
+        if (!subject) {
+          const msg = 'Please select a subject.';
+          document.getElementById('crMsg').textContent = msg;
+          showToast(msg, 'error'); setSubmitState(false); return;
+        }
+        if (!topic) {
+          const msg = 'Please enter a topic.';
+          document.getElementById('crMsg').textContent = msg;
+          showToast(msg, 'error'); setSubmitState(false); return;
+        }
+
         const s = new Date(start);
         const e = new Date(end);
-
         if (isNaN(s.getTime()) || isNaN(e.getTime()) || e <= s) {
           const msg = 'Invalid start/end times.';
           document.getElementById('crMsg').textContent = msg;
-          showToast(msg, 'error');
-          setSubmitState(false);
-          return;
+          showToast(msg, 'error'); setSubmitState(false); return;
         }
 
-        const classLevel = document.getElementById('crClass').value;
-        const subject = document.getElementById('crSubject').value;
-        const rate = getRate(classLevel, subject);
-        const startTime = start;
-        const endTime = end;
         const minutes = (e.getTime() - s.getTime()) / 60000;
-        const hours = minutes / 60;
-        const amount = Math.round(rate * hours);
-
-        const allowedDurations = [30, 60, 90, 120];
-        if (!allowedDurations.includes(minutes)) {
-          const msg = 'Invalid class duration. Allowed durations are 30 min, 1 hr, 1 hr 30 min, or 2 hrs.';
+        if (![30, 60, 90, 120].some(d => Math.abs(minutes - d) <= 1)) {
+          const msg = 'Invalid duration. Allowed: 30 min, 1 hr, 1 hr 30 min, 2 hrs.';
           document.getElementById('crMsg').textContent = msg;
-          showToast(msg, 'error');
-          setSubmitState(false);
-          return;
+          showToast(msg, 'error'); setSubmitState(false); return;
         }
 
-        const isLate = dayjs(startTime).format('YYYY-MM-DD') !== dayjs().format('YYYY-MM-DD');
-
-        const payload = {
-          tutorId: document.getElementById('crTutor').value,
-          studentId: document.getElementById('crStudent').value,
-          classLevel,
-          subject: document.getElementById('crSubject').value,
-          topic: document.getElementById('crTopic').value,
-          startTime,
-          endTime,
-          paymentAmount: amount,
-          comment: document.getElementById('crComment').value,
-          status: isLate ? 'Pending Approval' : 'Valid',
-        };
+        const isLate = dayjs(start).format('YYYY-MM-DD') !== dayjs().format('YYYY-MM-DD');
+        const payload = { tutorId, studentId, subject, topic, startTime: start, endTime: end, comment };
 
         if (isLate) {
-          const reason = document.getElementById('crLateReason').value;
+          const reason = document.getElementById('crLateReason').value.trim();
           if (!reason) {
             const msg = 'Please provide a reason for late submission.';
             document.getElementById('crMsg').textContent = msg;
-            showToast(msg, 'error');
-            setSubmitState(false);
-            return;
+            showToast(msg, 'error'); setSubmitState(false); return;
           }
           payload.reason = reason;
         }
@@ -270,11 +334,10 @@
           if (res.ok) {
             const id = out.recordId || out._id || 'N/A';
             const successMsg = isLate
-              ? `Record submitted for approval. Record ID: ${id}.`
-              : `Record submitted successfully! Record ID: ${id}.`;
+              ? `Submitted for approval. Record ID: ${id}.`
+              : `Submitted successfully! Record ID: ${id}.`;
             document.getElementById('crMsg').textContent = successMsg;
             showToast(successMsg, 'success');
-            document.getElementById('crPayment').textContent = `₦${amount.toLocaleString()}`;
             setSubmitState(true, 'Submitted');
             setTimeout(() => setSubmitState(false), 3000);
           } else {
@@ -287,11 +350,21 @@
           const msg = 'Network error. Please try again.';
           document.getElementById('crMsg').textContent = msg;
           showToast(msg, 'error');
-          console.error(error);
           setSubmitState(false);
         }
       }
 
+      // ── Event listeners ──
+      document.getElementById('crTutor').addEventListener('change', onTutorChange);
+      document.getElementById('crStudent').addEventListener('change', onStudentChange);
+      document.getElementById('crSubject').addEventListener('change', recalc);
+      document.getElementById('crStart').addEventListener('change', () => { checkLateSubmission(); recalc(); });
+      document.getElementById('crEnd').addEventListener('change', recalc);
+      document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('crSubmit').addEventListener('click', e => { e.preventDefault(); createClassRecord(); });
+      });
+
+      // ── Init ──
       fetchRates().then(() => recalc());
       loadDropdowns();
     </script>
