@@ -292,8 +292,8 @@
             headers: adminHeaders(),
           });
           if (!res.ok) return;
-          const tutors = await res.json();
-          // const tutors = await getResponseData(res);
+          // const tutors = await res.json();
+          const tutors = await getResponseData(res);
 
           if (!res.ok) {
             throw new Error(tutors.message || "Unable to load tutors.");
