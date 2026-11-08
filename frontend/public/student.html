@@ -7,6 +7,23 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
+    <script>
+      (async function gate() {
+        const API_BASE = window.location.hostname === 'localhost'
+          ? 'http://localhost:3000'
+          : 'https://dvs-system.onrender.com';
+        const saved = localStorage.getItem('adminPass') || '';
+        if (!saved) { window.location.replace('/admin-login.html'); return; }
+        try {
+          const resp = await fetch(`${API_BASE}/api/admin/tutors`, {
+            headers: { 'x-admin-password': saved },
+          });
+          if (!resp.ok) window.location.replace('/admin-login.html');
+        } catch (e) {
+          // network error — stay on page, controls will fail gracefully
+        }
+      })();
+    </script>
     <header>
       <div class="container">
         <nav>

@@ -4,7 +4,7 @@ import { AdminActionLog, ClassRecord, Tutor } from './models.js';
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'dvsAdmin0023';
 
-function requireAdmin(req, res, next) {
+export function requireAdmin(req, res, next) {
   const headerPass = req.headers['x-admin-password'];
   const queryPass = req.query.adminPassword;
   const bodyPass = req.body?.adminPassword;
