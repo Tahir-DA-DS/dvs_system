@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { Student, Tutor } from './models.js';
-
+import { requireAdmin } from './auth.js'
 const router = Router();
 
 // ── Create student (prevent duplicate names) ──
-router.post('/', async (req, res) => {
+router.post('/', requireAdmin, async (req, res) => {
   try {
     const { name, classLevel, enrolledSubjects } = req.body;
     if (!name || !classLevel)
@@ -33,7 +33,7 @@ router.get('/', async (_req, res) => {
 });
 
 // ── Delete student ──
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     const student = await Student.findById(req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found' });
@@ -45,7 +45,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // ── Update student ──
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAdmin, async (req, res) => {
   try {
     const { name, classLevel, enrolledSubjects } = req.body;
     if (!name || !classLevel)
@@ -72,7 +72,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // ── Suggest tutors for subjects ──
-router.post('/suggest-tutors', async (req, res) => {
+router.post('/suggest-tutors', requireAdmin , async (req, res) => {
   try {
     const { subjects } = req.body;
     if (!Array.isArray(subjects) || subjects.length === 0)

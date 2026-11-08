@@ -7,6 +7,28 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
+    <script>
+      (async function gate() {
+        const API =
+          window.location.hostname === "localhost"
+            ? "http://localhost:3000"
+            : "https://dvs-system.onrender.com";
+        const saved = localStorage.getItem("adminPass") || "";
+        if (!saved) {
+          window.location.replace("/admin-login.html");
+          return;
+        }
+        try {
+          const r = await fetch(`${API}/api/admin/tutors`, {
+            headers: { "x-admin-password": saved },
+          });
+          if (r.status === 401) {
+            localStorage.removeItem("adminPass");
+            window.location.replace("/admin-login.html");
+          }
+        } catch (e) {}
+      })();
+    </script>
     <header>
       <div class="container">
         <nav>
@@ -23,7 +45,8 @@
         <label>Full Name<input id="tutorName" /></label>
         <label>Account Number<input id="tutorAcct" /></label>
         <label>Bank Name<input id="tutorBank" /></label>
-        <label>Subjects (Ctrl/Cmd + Click to multi-select)
+        <label
+          >Subjects (Ctrl/Cmd + Click to multi-select)
           <select id="tutorSubjects" multiple size="8">
             <option>Mathematics</option>
             <option>English</option>
@@ -45,451 +68,492 @@
         <div id="tutorMsg" class="muted"></div>
       </section>
 
-      <section style="margin-top: 2rem;">
+      <section style="margin-top: 2rem">
         <h2>Registered Tutors</h2>
         <div id="tutorList"></div>
       </section>
     </div>
 
-    
-<script>
-  const API_BASE = window.location.hostname === 'localhost'
-    ? 'http://localhost:3000'
-    : 'https://dvs-system.onrender.com';
+    <script>
+      const API_BASE =
+        window.location.hostname === "localhost"
+          ? "http://localhost:3000"
+          : "https://dvs-system.onrender.com";
 
-  const api = (path) => `${API_BASE}/api${path}`;
-
-  // Prevent duplicate operations
-  let creatingTutor = false;
-  let savingTutor = false;
-  const deletingTutors = new Set();
-
-  // ==============================
-  // API HELPER
-  // ==============================
-
-  async function apiRequest(path, options = {}) {
-    const saved = localStorage.getItem('adminPass') || '';
-
-    const res = await fetch(api(path), {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-        'x-admin-password': saved
-      }
-    });
-
-    // Handle expired or invalid authentication
-    if (res.status === 401 || res.status === 403) {
-      localStorage.removeItem('adminPass');
-      window.location.replace('/admin-login.html');
-      throw new Error('Session expired. Please log in again.');
-    }
-
-    return res;
-  }
-
-  async function getResponseData(res) {
-    try {
-      return await res.json();
-    } catch {
-      return {};
-    }
-  }
-
-  function showMessage(elementId, message, error = false) {
-    const element = document.getElementById(elementId);
-    if (!element) return;
-
-    element.textContent = message;
-    element.style.color = error ? 'red' : '';
-  }
-
-  function getSelectedValues(select) {
-    return Array.from(select.selectedOptions).map(o => o.value);
-  }
-
-  // ==============================
-  // AUTHENTICATION
-  // ==============================
-
-  async function gate() {
-    const saved = localStorage.getItem('adminPass') || '';
-
-    if (!saved) {
-      window.location.replace('/admin-login.html');
-      return false;
-    }
-
-    try {
-      const res = await apiRequest('/tutors');
-
-      if (!res.ok) {
-        localStorage.removeItem('adminPass');
-        window.location.replace('/admin-login.html');
-        return false;
-      }
-
-      return true;
-
-    } catch (error) {
-      if (error.message.includes('Session expired')) return false;
-
-      showMessage(
-        'tutorMsg',
-        'Unable to verify your session. Check your internet connection and refresh.',
-        true
-      );
-
-      return false;
-    }
-  }
-
-  // ==============================
-  // CREATE TUTOR
-  // ==============================
-
-  async function createTutor() {
-    if (creatingTutor) return;
-
-    const name = document.getElementById('tutorName').value.trim();
-    const accountNumber = document.getElementById('tutorAcct').value.trim();
-    const bank = document.getElementById('tutorBank').value.trim();
-    const subjects = getSelectedValues(
-      document.getElementById('tutorSubjects')
-    );
-
-    if (!name || !accountNumber || !bank || !subjects.length) {
-      showMessage(
-        'tutorMsg',
-        'Please fill in all fields and select at least one subject.',
-        true
-      );
-      return;
-    }
-
-    creatingTutor = true;
-    showMessage('tutorMsg', 'Saving tutor...');
-
-    try {
-      const res = await apiRequest('/tutors', {
-        method: 'POST',
-        body: JSON.stringify({
-          name,
-          accountNumber,
-          bank,
-          subjects
-        })
+      const api = (path) => `${API_BASE}/api${path}`;
+      const adminHeaders = (extra = {}) => ({
+        ...extra,
+        "x-admin-password": localStorage.getItem("adminPass") || "",
       });
 
-      const out = await getResponseData(res);
+      // Prevent duplicate operations
+      let creatingTutor = false;
+      let savingTutor = false;
+      const deletingTutors = new Set();
 
-      if (!res.ok) {
-        throw new Error(out.message || 'Unable to save tutor.');
-      }
+      // ==============================
+      // API HELPER
+      // ==============================
 
-      document.getElementById('tutorName').value = '';
-      document.getElementById('tutorAcct').value = '';
-      document.getElementById('tutorBank').value = '';
+      async function apiRequest(path, options = {}) {
+        const saved = localStorage.getItem("adminPass") || "";
 
-      document.getElementById('tutorSubjects')
-        .querySelectorAll('option')
-        .forEach(option => option.selected = false);
-
-      showMessage('tutorMsg', 'Tutor saved successfully.');
-
-      await loadTutors();
-
-    } catch (error) {
-      showMessage('tutorMsg', error.message || 'Network error. Please try again.', true);
-
-    } finally {
-      creatingTutor = false;
-    }
-  }
-
-  // ==============================
-  // DELETE TUTOR
-  // ==============================
-
-  async function deleteTutor(id, name) {
-    if (deletingTutors.has(id)) return;
-
-    if (!confirm(`Delete tutor "${name}"? This cannot be undone.`)) return;
-
-    deletingTutors.add(id);
-
-    try {
-      const res = await apiRequest(
-        `/tutors/${encodeURIComponent(id)}`,
-        { method: 'DELETE' }
-      );
-
-      const out = await getResponseData(res);
-
-      if (!res.ok) {
-        throw new Error(out.message || 'Unable to delete tutor.');
-      }
-
-      showMessage('tutorMsg', out.message || 'Tutor deleted successfully.');
-
-      await loadTutors();
-
-    } catch (error) {
-      showMessage('tutorMsg', error.message || 'Network error. Please try again.', true);
-
-    } finally {
-      deletingTutors.delete(id);
-    }
-  }
-
-  // ==============================
-  // LOAD TUTORS
-  // ==============================
-
-  async function loadTutors() {
-    const list = document.getElementById('tutorList');
-
-    list.textContent = 'Loading tutors...';
-
-    try {
-      const res = await apiRequest('/tutors');
-
-      const tutors = await getResponseData(res);
-
-      if (!res.ok) {
-        throw new Error(tutors.message || 'Unable to load tutors.');
-      }
-
-      if (!Array.isArray(tutors)) {
-        throw new Error('Unexpected response from server.');
-      }
-
-      window._tutorsData = tutors;
-
-      if (!tutors.length) {
-        const empty = document.createElement('p');
-        empty.className = 'muted';
-        empty.textContent = 'No tutors registered yet.';
-        list.replaceChildren(empty);
-        return;
-      }
-
-      // Build table safely using DOM methods
-      const table = document.createElement('table');
-      table.style.width = '100%';
-      table.style.borderCollapse = 'collapse';
-
-      const thead = document.createElement('thead');
-      const headerRow = document.createElement('tr');
-
-      ['Name', 'Bank', 'Account', 'Subjects', 'Actions'].forEach(title => {
-        const th = document.createElement('th');
-        th.textContent = title;
-        th.style.cssText = 'text-align:left;padding:8px;border-bottom:1px solid #333;';
-        headerRow.appendChild(th);
-      });
-
-      thead.appendChild(headerRow);
-      table.appendChild(thead);
-
-      const tbody = document.createElement('tbody');
-
-      tutors.forEach((t, i) => {
-        const tr = document.createElement('tr');
-
-        const values = [
-          t.name || '',
-          t.bank || '',
-          t.accountNumber || '',
-          Array.isArray(t.subjects) ? t.subjects.join(', ') : ''
-        ];
-
-        values.forEach(value => {
-          const td = document.createElement('td');
-          td.textContent = value;
-          td.style.cssText = 'padding:8px;border-bottom:1px solid #222;';
-          tr.appendChild(td);
+        const res = await fetch(api(path), {
+          ...options,
+          headers: {
+            "Content-Type": "application/json",
+            ...options.headers,
+            "x-admin-password": saved,
+          },
         });
 
-        // Actions
-        const actions = document.createElement('td');
-        actions.style.cssText =
-          'padding:8px;border-bottom:1px solid #222;display:flex;gap:6px;';
-
-        const editBtn = document.createElement('button');
-        editBtn.textContent = 'Edit';
-        editBtn.className = 'small';
-        editBtn.addEventListener('click', () => openEditTutorModal(i));
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.className = 'small danger';
-        deleteBtn.addEventListener('click', () => {
-          deleteTutor(String(t._id), t.name || '');
-        });
-
-        actions.append(editBtn, deleteBtn);
-        tr.appendChild(actions);
-
-        tbody.appendChild(tr);
-      });
-
-      table.appendChild(tbody);
-      list.replaceChildren(table);
-
-    } catch (error) {
-      list.textContent = error.message || 'Unable to load tutors. Please refresh.';
-    }
-  }
-
-  // ==============================
-  // EDIT TUTOR MODAL
-  // ==============================
-
-  function openEditTutorModal(index) {
-    const t = window._tutorsData?.[index];
-
-    if (!t) return;
-
-    document.getElementById('editTutorId').value = t._id;
-    document.getElementById('editTutorName').value = t.name || '';
-    document.getElementById('editTutorAcct').value = t.accountNumber || '';
-    document.getElementById('editTutorBank').value = t.bank || '';
-
-    showMessage('editTutorMsg', '');
-
-    const sel = document.getElementById('editTutorSubjects');
-
-    const subjects = Array.isArray(t.subjects) ? t.subjects : [];
-
-    Array.from(sel.options).forEach(opt => {
-      opt.selected = subjects.includes(opt.value);
-    });
-
-    document.getElementById('editTutorModal').style.display = 'flex';
-  }
-
-  function closeEditTutorModal() {
-    document.getElementById('editTutorModal').style.display = 'none';
-  }
-
-  // ==============================
-  // SAVE TUTOR EDIT
-  // ==============================
-
-  async function saveTutorEdit() {
-    if (savingTutor) return;
-
-    const id = document.getElementById('editTutorId').value;
-    const name = document.getElementById('editTutorName').value.trim();
-    const accountNumber = document.getElementById('editTutorAcct').value.trim();
-    const bank = document.getElementById('editTutorBank').value.trim();
-
-    const subjects = getSelectedValues(
-      document.getElementById('editTutorSubjects')
-    );
-
-    if (!id || !name || !accountNumber || !bank || !subjects.length) {
-      showMessage(
-        'editTutorMsg',
-        'Please fill in all fields and select at least one subject.',
-        true
-      );
-      return;
-    }
-
-    savingTutor = true;
-    showMessage('editTutorMsg', 'Updating tutor...');
-
-    try {
-      const res = await apiRequest(
-        `/tutors/${encodeURIComponent(id)}`,
-        {
-          method: 'PUT',
-          body: JSON.stringify({
-            name,
-            accountNumber,
-            bank,
-            subjects
-          })
+        // Handle expired or invalid authentication
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem("adminPass");
+          window.location.replace("/admin-login.html");
+          throw new Error("Session expired. Please log in again.");
         }
-      );
 
-      const out = await getResponseData(res);
-
-      if (!res.ok) {
-        throw new Error(out.message || 'Unable to update tutor.');
+        return res;
       }
 
-      closeEditTutorModal();
+      async function getResponseData(res) {
+        try {
+          return await res.json();
+        } catch {
+          return {};
+        }
+      }
 
-      showMessage(
-        'tutorMsg',
-        `Tutor "${name}" updated successfully.`
-      );
+      function showMessage(elementId, message, error = false) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
 
-      await loadTutors();
+        element.textContent = message;
+        element.style.color = error ? "red" : "";
+      }
 
-    } catch (error) {
-      showMessage(
-        'editTutorMsg',
-        error.message || 'Network error. Please try again.',
-        true
-      );
+      function getSelectedValues(select) {
+        return Array.from(select.selectedOptions).map((o) => o.value);
+      }
 
-    } finally {
-      savingTutor = false;
-    }
-  }
+      // ==============================
+      // AUTHENTICATION
+      // ==============================
 
-  // ==============================
-  // MODAL BACKDROP
-  // ==============================
+      // async function gate() {
+      //   const saved = localStorage.getItem('adminPass') || '';
 
-  function initialiseTutorPage() {
-    const modal = document.getElementById('editTutorModal');
+      //   if (!saved) {
+      //     window.location.replace('/admin-login.html');
+      //     return false;
+      //   }
 
-    if (modal) {
-      modal.addEventListener('click', (e) => {
-        if (e.target.id === 'editTutorModal') {
+      //   try {
+      //     const res = await apiRequest('/tutors');
+
+      //     if (!res.ok) {
+      //       localStorage.removeItem('adminPass');
+      //       window.location.replace('/admin-login.html');
+      //       return false;
+      //     }
+
+      //     return true;
+
+      //   } catch (error) {
+      //     if (error.message.includes('Session expired')) return false;
+
+      //     showMessage(
+      //       'tutorMsg',
+      //       'Unable to verify your session. Check your internet connection and refresh.',
+      //       true
+      //     );
+
+      //     return false;
+      //   }
+      // }
+
+      // ==============================
+      // CREATE TUTOR
+      // ==============================
+
+      async function createTutor() {
+        if (creatingTutor) return;
+
+        const name = document.getElementById("tutorName").value.trim();
+        const accountNumber = document.getElementById("tutorAcct").value.trim();
+        const bank = document.getElementById("tutorBank").value.trim();
+        const subjects = getSelectedValues(
+          document.getElementById("tutorSubjects"),
+        );
+
+        if (!name || !accountNumber || !bank || !subjects.length) {
+          showMessage(
+            "tutorMsg",
+            "Please fill in all fields and select at least one subject.",
+            true,
+          );
+          return;
+        }
+
+        creatingTutor = true;
+        showMessage("tutorMsg", "Saving tutor...");
+
+        try {
+          const res = await apiRequest("/tutors", {
+            method: "POST",
+            headers: adminHeaders({ "Content-Type": "application/json" }),
+            body: JSON.stringify({
+              name,
+              accountNumber,
+              bank,
+              subjects,
+            }),
+          });
+
+          const out = await getResponseData(res);
+
+          if (!res.ok) {
+            throw new Error(out.message || "Unable to save tutor.");
+          }
+
+          document.getElementById("tutorName").value = "";
+          document.getElementById("tutorAcct").value = "";
+          document.getElementById("tutorBank").value = "";
+
+          document
+            .getElementById("tutorSubjects")
+            .querySelectorAll("option")
+            .forEach((option) => (option.selected = false));
+
+          showMessage("tutorMsg", "Tutor saved successfully.");
+
+          await loadTutors();
+        } catch (error) {
+          showMessage(
+            "tutorMsg",
+            error.message || "Network error. Please try again.",
+            true,
+          );
+        } finally {
+          creatingTutor = false;
+        }
+      }
+
+      // ==============================
+      // DELETE TUTOR
+      // ==============================
+
+      async function deleteTutor(id, name) {
+        if (deletingTutors.has(id)) return;
+
+        if (!confirm(`Delete tutor "${name}"? This cannot be undone.`)) return;
+
+        deletingTutors.add(id);
+
+        try {
+          const res = await apiRequest(`/tutors/${encodeURIComponent(id)}`, {
+            method: "DELETE",
+            headers: adminHeaders(),
+          });
+
+          const out = await getResponseData(res);
+
+          if (!res.ok) {
+            throw new Error(out.message || "Unable to delete tutor.");
+          }
+
+          showMessage("tutorMsg", out.message || "Tutor deleted successfully.");
+
+          await loadTutors();
+        } catch (error) {
+          showMessage(
+            "tutorMsg",
+            error.message || "Network error. Please try again.",
+            true,
+          );
+        } finally {
+          deletingTutors.delete(id);
+        }
+      }
+
+      // ==============================
+      // LOAD TUTORS
+      // ==============================
+
+      async function loadTutors() {
+        const list = document.getElementById("tutorList");
+
+        list.textContent = "Loading tutors...";
+
+        try {
+          // const res = await apiRequest('/tutors');
+          const res = await fetch(api("/admin/tutors"), {
+            headers: adminHeaders(),
+          });
+          if (!res.ok) return;
+          const tutors = await res.json();
+          // const tutors = await getResponseData(res);
+
+          if (!res.ok) {
+            throw new Error(tutors.message || "Unable to load tutors.");
+          }
+
+          if (!Array.isArray(tutors)) {
+            throw new Error("Unexpected response from server.");
+          }
+
+          window._tutorsData = tutors;
+
+          if (!tutors.length) {
+            const empty = document.createElement("p");
+            empty.className = "muted";
+            empty.textContent = "No tutors registered yet.";
+            list.replaceChildren(empty);
+            return;
+          }
+
+          // Build table safely using DOM methods
+          const table = document.createElement("table");
+          table.style.width = "100%";
+          table.style.borderCollapse = "collapse";
+
+          const thead = document.createElement("thead");
+          const headerRow = document.createElement("tr");
+
+          ["Name", "Bank", "Account", "Subjects", "Actions"].forEach(
+            (title) => {
+              const th = document.createElement("th");
+              th.textContent = title;
+              th.style.cssText =
+                "text-align:left;padding:8px;border-bottom:1px solid #333;";
+              headerRow.appendChild(th);
+            },
+          );
+
+          thead.appendChild(headerRow);
+          table.appendChild(thead);
+
+          const tbody = document.createElement("tbody");
+
+          tutors.forEach((t, i) => {
+            const tr = document.createElement("tr");
+
+            const values = [
+              t.name || "",
+              t.bank || "",
+              t.accountNumber || "",
+              Array.isArray(t.subjects) ? t.subjects.join(", ") : "",
+            ];
+
+            values.forEach((value) => {
+              const td = document.createElement("td");
+              td.textContent = value;
+              td.style.cssText = "padding:8px;border-bottom:1px solid #222;";
+              tr.appendChild(td);
+            });
+
+            // Actions
+            const actions = document.createElement("td");
+            actions.style.cssText =
+              "padding:8px;border-bottom:1px solid #222;display:flex;gap:6px;";
+
+            const editBtn = document.createElement("button");
+            editBtn.textContent = "Edit";
+            editBtn.className = "small";
+            editBtn.addEventListener("click", () => openEditTutorModal(i));
+
+            const deleteBtn = document.createElement("button");
+            deleteBtn.textContent = "Delete";
+            deleteBtn.className = "small danger";
+            deleteBtn.addEventListener("click", () => {
+              deleteTutor(String(t._id), t.name || "");
+            });
+
+            actions.append(editBtn, deleteBtn);
+            tr.appendChild(actions);
+
+            tbody.appendChild(tr);
+          });
+
+          table.appendChild(tbody);
+          list.replaceChildren(table);
+        } catch (error) {
+          list.textContent =
+            error.message || "Unable to load tutors. Please refresh.";
+        }
+      }
+
+      // ==============================
+      // EDIT TUTOR MODAL
+      // ==============================
+
+      function openEditTutorModal(index) {
+        const t = window._tutorsData?.[index];
+
+        if (!t) return;
+
+        document.getElementById("editTutorId").value = t._id;
+        document.getElementById("editTutorName").value = t.name || "";
+        document.getElementById("editTutorAcct").value = t.accountNumber || "";
+        document.getElementById("editTutorBank").value = t.bank || "";
+
+        showMessage("editTutorMsg", "");
+
+        const sel = document.getElementById("editTutorSubjects");
+
+        const subjects = Array.isArray(t.subjects) ? t.subjects : [];
+
+        Array.from(sel.options).forEach((opt) => {
+          opt.selected = subjects.includes(opt.value);
+        });
+
+        document.getElementById("editTutorModal").style.display = "flex";
+      }
+
+      function closeEditTutorModal() {
+        document.getElementById("editTutorModal").style.display = "none";
+      }
+
+      // ==============================
+      // SAVE TUTOR EDIT
+      // ==============================
+
+      async function saveTutorEdit() {
+        if (savingTutor) return;
+
+        const id = document.getElementById("editTutorId").value;
+        const name = document.getElementById("editTutorName").value.trim();
+        const accountNumber = document
+          .getElementById("editTutorAcct")
+          .value.trim();
+        const bank = document.getElementById("editTutorBank").value.trim();
+
+        const subjects = getSelectedValues(
+          document.getElementById("editTutorSubjects"),
+        );
+
+        if (!id || !name || !accountNumber || !bank || !subjects.length) {
+          showMessage(
+            "editTutorMsg",
+            "Please fill in all fields and select at least one subject.",
+            true,
+          );
+          return;
+        }
+
+        savingTutor = true;
+        showMessage("editTutorMsg", "Updating tutor...");
+
+        try {
+          const res = await apiRequest(`/tutors/${encodeURIComponent(id)}`, {
+            method: "PUT",
+            headers: adminHeaders({ "Content-Type": "application/json" }),
+            body: JSON.stringify({
+              name,
+              accountNumber,
+              bank,
+              subjects,
+            }),
+          });
+
+          const out = await getResponseData(res);
+
+          if (!res.ok) {
+            throw new Error(out.message || "Unable to update tutor.");
+          }
+
           closeEditTutorModal();
+
+          showMessage("tutorMsg", `Tutor "${name}" updated successfully.`);
+
+          await loadTutors();
+        } catch (error) {
+          showMessage(
+            "editTutorMsg",
+            error.message || "Network error. Please try again.",
+            true,
+          );
+        } finally {
+          savingTutor = false;
         }
-      });
-    }
-
-    // Authenticate before loading tutor records
-    gate().then(authenticated => {
-      if (authenticated) {
-        loadTutors();
       }
-    });
-  }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initialiseTutorPage);
-  } else {
-    initialiseTutorPage();
-  }
-</script>
+      // ==============================
+      // MODAL BACKDROP
+      // ==============================
+
+      function initialiseTutorPage() {
+        const modal = document.getElementById("editTutorModal");
+
+        if (modal) {
+          modal.addEventListener("click", (e) => {
+            if (e.target.id === "editTutorModal") {
+              closeEditTutorModal();
+            }
+          });
+        }
+
+        // Authenticate before loading tutor records
+        gate().then((authenticated) => {
+          if (authenticated) {
+            loadTutors();
+          }
+        });
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initialiseTutorPage);
+      } else {
+        initialiseTutorPage();
+      }
+    </script>
 
     <!-- Edit Tutor Modal -->
-    <div id="editTutorModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:999; align-items:center; justify-content:center;">
-      <div style="background:#1a2540; border:1px solid #2a3a5a; border-radius:12px; padding:2rem; width:90%; max-width:480px;">
-        <h3 style="margin-bottom:1rem; color:#fff;">Edit Tutor</h3>
+    <div
+      id="editTutorModal"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 999;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <div
+        style="
+          background: #1a2540;
+          border: 1px solid #2a3a5a;
+          border-radius: 12px;
+          padding: 2rem;
+          width: 90%;
+          max-width: 480px;
+        "
+      >
+        <h3 style="margin-bottom: 1rem; color: #fff">Edit Tutor</h3>
         <input type="hidden" id="editTutorId" />
-        <label style="display:block; margin-bottom:0.5rem;">Full Name
-          <input id="editTutorName" style="width:100%; margin-top:4px;" />
+        <label style="display: block; margin-bottom: 0.5rem"
+          >Full Name
+          <input id="editTutorName" style="width: 100%; margin-top: 4px" />
         </label>
-        <label style="display:block; margin-bottom:0.5rem; margin-top:0.8rem;">Account Number
-          <input id="editTutorAcct" style="width:100%; margin-top:4px;" />
+        <label style="display: block; margin-bottom: 0.5rem; margin-top: 0.8rem"
+          >Account Number
+          <input id="editTutorAcct" style="width: 100%; margin-top: 4px" />
         </label>
-        <label style="display:block; margin-bottom:0.5rem; margin-top:0.8rem;">Bank Name
-          <input id="editTutorBank" style="width:100%; margin-top:4px;" />
+        <label style="display: block; margin-bottom: 0.5rem; margin-top: 0.8rem"
+          >Bank Name
+          <input id="editTutorBank" style="width: 100%; margin-top: 4px" />
         </label>
-        <label style="display:block; margin-bottom:0.5rem; margin-top:0.8rem;">Subjects (Ctrl/Cmd + Click to multi-select)
-          <select id="editTutorSubjects" multiple size="8" style="width:100%; margin-top:4px;">
+        <label style="display: block; margin-bottom: 0.5rem; margin-top: 0.8rem"
+          >Subjects (Ctrl/Cmd + Click to multi-select)
+          <select
+            id="editTutorSubjects"
+            multiple
+            size="8"
+            style="width: 100%; margin-top: 4px"
+          >
             <option>Mathematics</option>
             <option>English</option>
             <option>Physics</option>
@@ -506,8 +570,11 @@
             <option>French</option>
           </select>
         </label>
-        <div id="editTutorMsg" style="margin-top:0.5rem; font-size:0.85rem;"></div>
-        <div style="display:flex; gap:0.8rem; margin-top:1.2rem;">
+        <div
+          id="editTutorMsg"
+          style="margin-top: 0.5rem; font-size: 0.85rem"
+        ></div>
+        <div style="display: flex; gap: 0.8rem; margin-top: 1.2rem">
           <button onclick="saveTutorEdit()">Save Changes</button>
           <button onclick="closeEditTutorModal()" class="muted">Cancel</button>
         </div>

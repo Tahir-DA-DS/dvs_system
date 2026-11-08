@@ -75,6 +75,7 @@
         : 'https://dvs-system.onrender.com';
 
       const api = (path) => `${API_BASE}/api${path}`;
+      const adminHeaders = (extra = {}) => ({ ...extra, 'x-admin-password': localStorage.getItem('adminPass') || '' });
 
       function getSelectedValues(select) {
         return Array.from(select.selectedOptions).map(o => o.value);
@@ -100,7 +101,7 @@
 
         const res = await fetch(api('/students'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: adminHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ name, classLevel, enrolledSubjects })
         });
         const out = await res.json();
@@ -113,7 +114,7 @@
           if (enrolledSubjects.length) {
             const tutors = await fetch(api('/students/suggest-tutors'), {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+             headers: adminHeaders({ 'Content-Type': 'application/json' }),
               body: JSON.stringify({ subjects: enrolledSubjects })
             }).then(r => r.json());
             if (tutors.length) {
@@ -125,7 +126,7 @@
 
       async function deleteStudent(id, name) {
         if (!confirm(`Delete student "${name}"? This cannot be undone.`)) return;
-        const res = await fetch(api(`/students/${id}`), { method: 'DELETE' });
+        const res = await fetch(api(`/students/${id}`), { method: 'DELETE', headers: adminHeaders() });
         const out = await res.json();
         document.getElementById('studentMsg').textContent = out.message;
         document.getElementById('studentMsg').style.color = res.ok ? '' : 'red';
@@ -207,7 +208,7 @@
 
         const res = await fetch(api(`/students/${id}`), {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: adminHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ name, classLevel, enrolledSubjects })
         });
         const out = await res.json();

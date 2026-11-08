@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { Tutor } from './models.js';
+import { requireAdmin } from './auth.js';
 
 const router = Router();
 
 // ── Create tutor (prevent duplicate names) ──
-router.post('/', async (req, res) => {
+router.post('/', requireAdmin, async (req, res) => {
   try {
     const { name, accountNumber, bank, subjects } = req.body;
     if (!name || !accountNumber || !bank || !Array.isArray(subjects) || subjects.length === 0)
@@ -24,12 +25,12 @@ router.post('/', async (req, res) => {
 
 // ── List tutors ──
 router.get('/', async (_req, res) => {
-  const tutors = await Tutor.find().sort({ name: 1 });
+  const tutors = await Tutor.find().select('name subjects').sort({ name: 1 });
   res.json(tutors);
 });
 
 // ── Delete tutor ──
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     const tutor = await Tutor.findById(req.params.id);
     if (!tutor) return res.status(404).json({ message: 'Tutor not found' });
@@ -41,7 +42,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // ── Update tutor ──
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAdmin, async (req, res) => {
   try {
     const { name, accountNumber, bank, subjects } = req.body;
     if (!name || !accountNumber || !bank || !Array.isArray(subjects) || subjects.length === 0)
